@@ -89,16 +89,16 @@ await runner.test('魔数不符 / 文件过短 都被拒绝', () => {
   assertEqual(shortCode, 'FILE_TRUNCATED', '过短错误码')
 })
 
-await runner.test('保留字段（FK 槽位）非零 → 明确拒绝，而不是猜着解析', () => {
+await runner.test('保留字段非零 → 明确拒绝，而不是猜着解析', () => {
   const bytes = serializeHeader(sampleHeader())
-  new DataView(bytes.buffer).setUint16(OFFSETS.RESERVED_FK, 7)
+  new DataView(bytes.buffer).setUint16(OFFSETS.RESERVED, 7)
   let code = null
   try {
     parseHeader(bytes)
   } catch (error) {
     code = error.code
   }
-  assertEqual(code, 'RESERVED_FK_UNSUPPORTED', 'FK 槽位错误码')
+  assertEqual(code, 'RESERVED_FIELD_UNSUPPORTED', '保留字段错误码')
 })
 
 await runner.test('段顺序必须是 0/1/2 的排列（越界或重复都拒绝）', () => {

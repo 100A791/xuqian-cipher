@@ -12,7 +12,7 @@
  *   0     8     MAGIC           SPEC §3 的 8 个非打印字节
  *   8     1     VERSION         当前 0x01
  *   9     1     FLAGS           bit0=内容经压缩；bit1=有口令保护；其余保留必须为 0
- *   10    2     RESERVED_FK     **FK 槽位**：SPEC 全文未定义 FK，此处保留且必须为 0（见决策记录）
+ *   10    2     RESERVED        保留字节：必须为 0（非零即拒绝解析）。与国密 SM4 的 FK 无关
  *   12    4     TIMESTAMP       Unix 秒
  *   16    16    BOOT_NONCE      一次性引导随机数（nonce 唯一性的来源之一）
  *   32    4     RULES_LEN       规则块字节数
@@ -61,7 +61,7 @@ export const OFFSETS = Object.freeze({
   MAGIC: 0,
   VERSION: 8,
   FLAGS: 9,
-  RESERVED_FK: 10,
+  RESERVED: 10,
   TIMESTAMP: 12,
   BOOT_NONCE: 16,
   RULES_LEN: 32,
@@ -141,7 +141,7 @@ export function serializeHeader(header) {
   out.set(MAGIC, OFFSETS.MAGIC)
   out[OFFSETS.VERSION] = header.version
   out[OFFSETS.FLAGS] = header.flags
-  dv.setUint16(OFFSETS.RESERVED_FK, 0) // FK 槽位：SPEC 未定义，固定为 0
+  dv.setUint16(OFFSETS.RESERVED, 0) // 保留字节：固定为 0（与 SM4 的 FK 无关，见文件头注释）
   dv.setUint32(OFFSETS.TIMESTAMP, header.timestamp)
   out.set(header.bootNonce, OFFSETS.BOOT_NONCE)
   dv.setUint32(OFFSETS.RULES_LEN, header.rulesLen)
@@ -164,8 +164,8 @@ export function parseHeader(bytes) {
   for (let i = 0; i < MAGIC.length; i++) {
     if (bytes[OFFSETS.MAGIC + i] !== MAGIC[i]) throw new FormatError('MAGIC_MISMATCH', '魔数不匹配')
   }
-  const reservedFk = dv.getUint16(OFFSETS.RESERVED_FK)
-  if (reservedFk !== 0) throw new FormatError('RESERVED_FK_UNSUPPORTED', '保留字段（FK 槽位）非零，本版本无法解析')
+  const reserved = dv.getUint16(OFFSETS.RESERVED)
+  if (reserved !== 0) throw new FormatError('RESERVED_FIELD_UNSUPPORTED', '保留字段非零，本版本无法解析')
 
   const header = defaultHeader({
     version: bytes[OFFSETS.VERSION],

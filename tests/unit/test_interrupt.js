@@ -109,7 +109,7 @@ await runner.test('头部声明被篡改（长度/规则块长度）→ 统一�
     ['段数改成 1', (b) => { b[40] = 1 }],
     ['拆分方式改成 9', (b) => { b[41] = 9 }],
     ['版本号改成 2', (b) => { b[8] = 2 }],
-    ['保留字段（FK 槽位）写 1', (b) => { new DataView(b.buffer).setUint16(10, 1) }],
+    ['保留字段写 1', (b) => { new DataView(b.buffer).setUint16(10, 1) }],
   ]
   const failures = []
   for (const [label, mutate] of cases) {

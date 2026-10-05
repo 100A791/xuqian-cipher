@@ -11,8 +11,14 @@ const ALGORITHMS: Array<[string, string, string]> = [
   ['AES-CTR', 'NIST SP 800-38A', '14/14'],
   ['文件格式层', '自描述头部 + KV 帧', '13/13'],
   ['文件加解密', '往返 + OpenSSL 交叉验证', '18/18'],
-  ['图片水印', 'LSB / 公开层 / 私有层', '21/21'],
-  ['AI 检测', '元数据 / DCT / LSB / 色彩 / 边缘', '21/21'],
+  ['图片水印', 'LSB / 公开层 / 私有层', '29/29'],
+  ['AI 检测', '元数据 / 频域（DCT·FFT·DWT）/ LSB / 色彩 / 边缘', '45/45'],
+  ['CSPRNG 随机源', 'getRandomValues，位数完整', '7/7'],
+  ['大文件分块', '1MiB 分块 + 计数器不重叠', '7/7'],
+  ['统一失败延迟', '密钥错 / 文件被改不可区分', '7/7'],
+  ['异常中断', '截断 / 篡改 → 统一失败', '8/8'],
+  ['加密进度回调', '分阶段进度与可取消', '6/6'],
+  ['本地存储与 SPEC 自检', 'IndexedDB 内无密钥字段', '19/19'],
 ]
 
 export function SelfStatusPage() {
@@ -20,7 +26,7 @@ export function SelfStatusPage() {
 
   return (
     <SelfShell title={t('sc.status.title')} description={t('sc.status.desc')}>
-      <Alert tone="warn">{t('sc.status.pending')}</Alert>
+      <Alert tone="info">{t('sc.status.specParams')}</Alert>
 
       <div>
         <h3 className="mb-1 text-sm font-semibold">{t('sc.status.verified')}</h3>

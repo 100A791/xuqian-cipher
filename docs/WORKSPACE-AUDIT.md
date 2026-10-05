@@ -123,9 +123,11 @@
 
 `.git` 不存在。一旦改坏，**无法按行回退**——这一点项目文档已自认，但风险实际存在。强烈建议 `git init` 并至少提交一次基线。
 
-### P2 · SPEC 的 `FK` 字段仍未定义（需你拍板）
+### P2 · SPEC 的 `FK` 字段未定义（**已定案**）
 
-自研格式头部有 2 字节 `RESERVED_FK`，SPEC 全文只出现名字、没有定义。当前按最保守默认处理：**保留槽位、强制为 0、非零即拒绝解析**。这是全项目唯一真正"等用户裁定"的规范缺口（决策 D3）。
+自研格式头部有 2 字节 `RESERVED_FK`，SPEC 全文只出现名字、没有定义。当时按最保守默认处理：**保留槽位、强制为 0、非零即拒绝解析**。
+
+**用户已裁定（2026-10-06）**：该 `FK` 指**国密 SM4 标准（GB/T 32907-2016）的系统参数** —— 算法内置常量、16 字节、不落文件，与文件头这 2 字节无关。因此字段已正名为 `RESERVED`（错误码 `RESERVED_FIELD_UNSUPPORTED`），误导性的 `FK` 命名已全部清除。详见第 8 节。
 
 ### P3 · 非加密路径使用 `Math.random`
 
@@ -149,9 +151,10 @@
 3. 校准文档计数（P2，建议改成脚本自动回写）。
 4. 汇总测试脚本区分"子进程启动失败"与"用例失败"（第 3 节的健壮性问题）。
 
-**需要你决策**：
+**需要你决策（已解决）**：
 
-- SPEC 的 `FK` 到底怎么定义（D3）；以及自研路线的 PBKDF2 是否真要用 RFC 6070（需解禁 SHA-1，D6）。
+- ~~SPEC 的 `FK` 到底怎么定义（D3）~~ → 已确认指 **国密 SM4 的系统参数**；文件头字段正名为 `RESERVED`。
+- ~~自研路线的 PBKDF2 是否真要用 RFC 6070（需解禁 SHA-1，D6）~~ → 决定**维持** PBKDF2-HMAC-SHA256 向量，不引入 SHA-1。
 
 **长期**：自研密码代码未经第三方审计，项目自己标注"不应上线公网"——这个判断应当保持。
 
@@ -214,6 +217,42 @@ export function randomUint32() { return new Uint32Array(randomBytes(4))[0] }
 > 这两条都不是代码缺陷：`sync-docs.mjs` 只用了 `node:fs`；同样的脚本在 Node 24 上输出「已同步 8 篇文档 + 截图（链接校验通过）」。建议在普通终端用 Node 24 执行 `pnpm build` / `pnpm test:*`。
 
 **构建期的一条非致命提示**（未处理，留给作者判断）：`src/selfcrypto/watermark/extract.js` 被 `ai/report.js` 动态 import、同时被 `SelfWatermarkPage.tsx` 静态 import，Vite 提示"动态 import 无法把它拆到独立 chunk"。功能无影响，只是分包未达最优；若要消除，可把界面那侧也改成动态 import。
+
+---
+
+## 8. 用户裁定与随之而来的改动（2026-10-06 02:35）
+
+第 6 节末尾留给用户的两个决策已裁定，据此完成一轮改动。
+
+### 裁定 1 —— `FK` = 国密 SM4 标准的系统参数
+
+据此确认：文件头偏移 10 的那 2 字节与 `FK` **毫无关系**（SM4 的 `FK` 是 `a3b1bac6 56aa3350 677d9197 b27022dc`，16 字节的算法内置常量，永不落文件）。原命名 `RESERVED_FK` 属误导，已全面正名：
+
+| 落点 | 改动 |
+| --- | --- |
+| `src/selfcrypto/file/format.js` | 偏移表 `RESERVED_FK` → `RESERVED`；序列化/解析注释同步；错误码 `RESERVED_FK_UNSUPPORTED` → `RESERVED_FIELD_UNSUPPORTED` |
+| `tests/unit/test_format.js` | 用例名与断言改用 `OFFSETS.RESERVED` / `RESERVED_FIELD_UNSUPPORTED` |
+| `tests/unit/test_interrupt.js` | 篡改用例标签改为"保留字段写 1" |
+| `src/selfcrypto/common/constants.js` | `UNCONFIRMED` 移除「FK 包装后的字节布局」（9 → 8 项）并注明定案理由 |
+| `src/app/i18n.ts` | 状态页键 `sc.status.pending` → `sc.status.specParams`，中英重写；告警 tone `warn` → `info`；`vectorNote` 补上"15 套 227 项" |
+| `src/components/selfcrypto/SelfStatusPage.tsx` | 引用新键；**并校准算法表的陈旧计数**（水印 21→**29**、AI 21→**45**），补齐自研路线其余 6 套 |
+| 文档 | `PROJECT-REPORT.md`（6 处）、`src/selfcrypto/README.md`（头部表 / D3 / §9 对照）、本报告，全部同步 |
+
+> 顺带核实：SM4 实现的 `FK` 与 `CK` **与 GB/T 32907-2016 逐项一致**（CK 按 `ck_{i,j} = (4i+j)×7 mod 256` 全 32 项比对通过）。也就是说命名混乱并未波及算法正确性。
+
+### 裁定 2 —— PBKDF2 维持 HMAC-SHA256 向量，不引入 SHA-1
+
+D6 由"替用户做的取舍"升格为**用户确认的定案**。理由：RFC 6070 校验的是 PBKDF2 的**骨架**（迭代循环 / 块索引 `INT(i)` / 逐块异或链 / 末块截断），与所用哈希无关 —— 用 SHA-256 向量验的是同一个结构，不必为跑一组向量而在最小化代码库里引入已不安全的 SHA-1。
+
+本条判断的旁证：本项目用 OpenSSL 复算了 RFC 6070 的官方值，确认它确实是 HMAC-SHA1 向量集 ——
+
+```
+PBKDF2-HMAC-SHA1("password","salt",c=1,   dkLen=20) = 0c60c80f961f0e71f3a9b524af6012062fe037a6
+PBKDF2-HMAC-SHA1("password","salt",c=2,   dkLen=20) = ea6c014dc72d6f8ccd1ed92ace1d41f0d8de8957
+PBKDF2-HMAC-SHA1("password","salt",c=4096,dkLen=20) = 4b007901b765489abead49d926f721d065a429c1
+```
+
+**改动后的复验**：`tsc` 0 错误 · `vitest` 66/66 · 自研 **15 套 227 项全绿** · CLI 往返字节一致。至此 SPEC §9 的待确认参数**已无遗留**（G2/G3/G5/G7 属有意保留的已知能力缺口，性质不同）。
 
 ---
 
