@@ -15,7 +15,7 @@ pnpm test:cli      # 命令行工具测试（55 项，含与网站共用加密�
 pnpm test:smoke    # 浏览器端到端冒烟测试（119 项，真实 Edge/Chrome + CDP，含 11 处无障碍审计）
 pnpm test:header   # .XUQIAN 文件头结构验证（真实落盘文件解析）
 pnpm test:interop  # 浏览器 ↔ 命令行 双向互操作（27 项）
-pnpm test:selfcrypto  # **自研加密路线**（14 套 220 项断言，零依赖运行器）
+pnpm test:selfcrypto  # **自研加密路线**（15 套 227 项断言，零依赖运行器）
 pnpm bench         # 性能基准（实测数字，写入 docs/PERFORMANCE.md）
 
 pnpm test:all      # 以上全部（推荐在交付前执行）
@@ -89,7 +89,7 @@ pnpm test:all      # 以上全部（推荐在交付前执行）
 
 ---
 
-## 二·补、自研加密路线（`tests/unit/`，14 套 220 项断言）
+## 二·补、自研加密路线（`tests/unit/`，15 套 227 项断言）
 
 自研路线不依赖 Vitest/任何第三方，用自带的零依赖运行器：
 
@@ -99,6 +99,7 @@ pnpm test:selfcrypto     # 等价于 node tests/unit/run-all.js
 
 | 套件 | 项数 | 验什么 |
 | --- | --- | --- |
+| `test_random` | 7 | CSPRNG 封装：长度校验、`randomUint32` **32 位完整性回归**（曾退化成 8 位）、`randomInt` 闭区间与无取模偏置 |
 | `test_sha256` | 18 | FIPS 180-4 向量 + 边界（空串 / 分块填充） |
 | `test_hmac` | 14 | RFC 4231 向量 |
 | `test_pbkdf2` | 10 | OpenSSL 交叉生成的 PBKDF2-HMAC-SHA256 向量 |

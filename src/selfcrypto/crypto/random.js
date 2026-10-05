@@ -14,7 +14,11 @@ export function randomBytes(length) {
 }
 
 export function randomUint32() {
-  return new Uint32Array(randomBytes(4))[0]
+  // 注意：不能用 new Uint32Array(randomBytes(4))[0] —— 用 TypedArray 作参数构造时是**逐元素复制**，
+  // 会得到 4 个各自 0~255 的元素，[0] 只是第一个字节（即随机性退化到 8 位）。
+  // 必须走 buffer 视图（或 DataView）才能把 4 个字节读成一个 32 位数。
+  const bytes = randomBytes(4)
+  return new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength).getUint32(0, false)
 }
 
 /** 取 [min, max] 闭区间随机整数（使用 32 位随机源；不用于密钥材料）。 */

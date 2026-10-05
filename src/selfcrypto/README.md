@@ -91,6 +91,15 @@ SPEC §5 要求 PBKDF2「跑 **RFC 6070** 测试向量」，但 **RFC 6070 是 P
 现已全部改为 `new Uint8Array(x)` 显式复制，并在 `test_aes.js` / `test_ctr.js` 加了三条回归断言：
 Buffer 与 Uint8Array 结果一致、加密不改写调用方输入、同一计数器对象连用两次结果相同。
 
+**用 TypedArray 作参数构造 `new Uint32Array(...)` 是逐元素复制，不是 buffer 视图。**
+`random.js` 的 `randomUint32()` 原本写成 `new Uint32Array(randomBytes(4))[0]`：
+`randomBytes(4)` 是长度为 4 的 `Uint8Array`，作为**类数组**传给 `Uint32Array` 构造器时会被**逐元素**复制成
+4 个各自 0~255 的元素，于是 `[0]` 只是第一个字节 —— **32 位随机性退化成 8 位**（实测 2000 次调用最大值恒为 255）。
+它一直潜伏，是因为没有任何调用方：密钥材料都直接走 `randomBytes`，而 `randomUint32`/`randomInt` 当时无人使用。
+直到统一失败延迟从 `Math.random` 改为 `randomInt`（见 D38）才被暴露。
+现改为 `new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength).getUint32(0, false)`，
+并在新增的 `test_random.js` 里用"最大值必须超过 255、且至少出现一个 ≥ 2^31 的样本"钉死。
+
 ## 3. 核心伪代码（SPEC §8）
 
 ```
@@ -396,6 +405,7 @@ SPEC 阶段六原文：「纯前端方案写 indexeddb.js 存密文。带后端�
 | D34 | 主密钥在 Worker 里**用完立即清零**，且清零放在 await 之后的 `finally` | 起初写成"包一层同步 helper"，那会在 Promise 还没 settle 时就清零密钥（已修） |
 | D36 | 本地密文库支持**整库导出/导入**：自定义二进制归档（magic `XQLIB`+版本、逐条 `nameLen/name/dataLen/data/version/savedAt`），导出时同样过"无密钥字段"白名单，解析要求**整块消费完** | 密文库存在浏览器里，**用户清一次浏览器数据就全没了**；有备份才能自救。刻意不用 base64/JSON：保持密文是原始字节，也避免文本化 |
 | D35 | 有形水印做成**可扩展的 mode**：`corner`（角落/居中单个）与 `tile`（**全图平铺斜向重复**，用户新增需求）。平铺参数：角度默认 **-30°**（夹在 [-45,45]）、横向间距 = 字号×8、纵向 = 字号×4、奇数行错开半个间距 | 用户原话「可全图覆盖（传统水印一样斜着一排排的）等」——那个"等"意味着以后可能还有别的样式，所以按 mode 扩展而不是硬编码两种。**字号与透明度仍守 SPEC §3 的区间**（不因为是新模式就破例），间距与角度 SPEC 未定故记为决策 |
+| D38 | 统一失败延迟的随机源由 `Math.random` 改为 CSPRNG（复用 `crypto/random.js` 的 `randomInt`） | SPEC §7 要求"随机数只用系统 CSPRNG"，`Math.random` 严格读法下属违规。延迟量本身不是密钥材料，但**不给约束留例外**更省心。此改动顺带暴露并修复了 `randomUint32()` 只返回 1 个字节的潜伏 bug（见上「踩过的坑」） |
 
 ### SPEC §6 阶段六验收 → 证据
 
@@ -422,6 +432,7 @@ SPEC 阶段七原文：「跑全部标准测试向量。跑交叉验证。跑大
 
 | SPEC 要求 | 对应套件 | 断言数 |
 | --- | --- | --- |
+| （阶段零）随机数封装 | `test_random`（randomBytes / randomUint32 / randomInt，含"`randomUint32` 退化成 8 位"的回归） | 7 |
 | 跑全部标准测试向量 | `test_sha256` / `test_hmac` / `test_pbkdf2` / `test_aes` / `test_ctr`（向量由 OpenSSL 独立生成） | 18/14/10/12/14 |
 | 跑交叉验证 | `test_file_crypto`（自研加密 → OpenSSL 解密，OpenSSL 加密 → 自研解密） | 18 |
 | 跑大文件分块测试 | `test_large_file`（12 MB/12 块、1 块 ±1 字节、24 块计数器不重叠） | 7 |
@@ -431,7 +442,7 @@ SPEC 阶段七原文：「跑全部标准测试向量。跑交叉验证。跑大
 | 跑 AI 检测报告测试 | `test_ai_detect`（含 FFT/DWT 正确性） | 45 |
 | （附加）格式层 / 存储与 SPEC 结构自检 / 大文件进度回调 | `test_format` / `test_storage` / `test_progress` | 13 / 19 / 6 |
 
-合计 **14 套、220 项断言**，`pnpm test:selfcrypto` 全绿；另有浏览器烟雾 **119 项**、站点原有单测 66 项。
+合计 **15 套、227 项断言**，`pnpm test:selfcrypto` 全绿；另有浏览器烟雾 **119 项**、站点原有单测 66 项。
 
 ### 实测数据（不是估算）
 

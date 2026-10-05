@@ -157,4 +157,64 @@
 
 ---
 
+## 7. 修复记录（2026-10-06 02:25）
+
+第 5 节列出的问题**已全部处理**。下表为逐项动作与验证方式。
+
+| # | 原问题 | 处理 | 落点 |
+| --- | --- | --- | --- |
+| P1 | `sc.status.gap2` 称 FFT/DWT 未实现 | 改为如实描述（三种变换均已实现并纳入频域分，仍缺真 PRNU）；**同时发现并修正同类陈旧项 `gap3`**（元数据扫描已支持 WebP + HEIC/AVIF 标记扫描） | `src/app/i18n.ts`（中英各 2 处） |
+| P1′ | 开始页文案 `start.self.p3` 称水印/AI 检测"规划中" | 改为"另有图片水印与 AI 检测"，如实描述已交付能力 | `src/app/i18n.ts`（中英各 1 处） |
+| P2 | 冒烟条目 116 → 实测 119 | 全部校准 | `README.md`、`docs/TESTING.md`(×2)、`docs/PROJECT-REPORT.md`(×2)、`src/selfcrypto/README.md`(×2) |
+| P2 | `test_watermark` 21→29、`test_storage` 13→19 | 校准；并补上缺行 | `src/selfcrypto/README.md`、`docs/TESTING.md` |
+| P2 | 自研合计表格逐行相加 206 ≠ 声称 220 | 校准为实测 **15 套 227 项**（见下方新增套件） | `docs/PROJECT-REPORT.md`(×3)、`docs/TESTING.md`(×2)、`src/selfcrypto/README.md` |
+| P2 | `package.json` 2.1.0 与里程碑 v2.2 易混 | 版本号对齐为 **2.2.0** | `package.json` |
+| P2 | 无版本控制 | `git init` + 基线提交（166 文件；忽略 `node_modules`、`dist`、`public/docs`、`.dsh-meow`、`.workbuddy`）。**注意**：仓库身份暂设为 `xuqian <xuqian@localhost>`，请按需 `git config` 修改 | `.git/`（新建）、`.gitignore` |
+| P2 | 汇总器把"子进程没启动"误报成"用例失败" | 检查 `run.error`，单列 `ERROR` 并给出环境提示（"请在有权限派生子进程的普通终端重跑"） | `tests/unit/run-all.js`、`scripts/cli-test.mjs` |
+| P3 | `Math.random` 用于延时与日志 id | 统一改走 CSPRNG：`delay.js` 用 `randomInt`，`store.ts` 日志 id 用 `getRandomValues` | `src/selfcrypto/common/delay.js`、`src/app/store.ts` |
+| P2′ | i18n 键数文档写 194 / 304 | 校准为实测 **314**（中英各 314，逐键对齐已核） | `docs/PROJECT-REPORT.md`(×2) |
+| P2′ | `engines` 与 `bin` 冲突条目已过期 | 改写为如实描述（`bin` 已指向启动器；残留的只是"装得上、CLI 跑不了"） | `docs/PROJECT-REPORT.md` |
+
+### 修复过程中**新发现并修掉的一个真 bug**（值得单独记一笔）
+
+把统一失败延时从 `Math.random` 改为 `randomInt` 后，`test_uniform_delay` 立刻从 7/7 变成 6/7，报"覆盖范围应接近整个区间，实际跨度 255"。
+
+根因在 `src/selfcrypto/crypto/random.js`：
+
+```js
+// 错误：用 TypedArray 作参数构造 `new Uint32Array(typedArray)` 是【逐元素复制】，
+// 不是 buffer 视图。randomBytes(4) 是长度 4 的 Uint8Array，于是得到 4 个各自 0~255 的元素，
+// [0] 只是第一个字节 —— 32 位随机性退化成 8 位。
+export function randomUint32() { return new Uint32Array(randomBytes(4))[0] }
+```
+
+- **实测确认**：连续 2000 次调用，最大值恒为 **255**。
+- **影响面**：`randomUint32`/`randomInt` 此前**没有任何生产调用方**（密钥材料都直接走 `randomBytes`），所以**未影响任何密钥/水印/分块逻辑**；这是一个潜伏 bug，不是泄露。
+- **修复**：改用 `new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength).getUint32(0, false)`。
+- **回归防护**：新增 `tests/unit/test_random.js`（7 项断言），用"最大值必须超过 255、且至少出现一个 ≥ 2^31 的样本"把位数完整性钉死；已注册进 `run-all.js`，自研路线因此由 14 套 220 项升为 **15 套 227 项**。
+
+### 修复后的复验结果
+
+| 检查 | 结果 |
+| --- | --- |
+| `tsc --noEmit` | ✅ 0 错误 |
+| `vitest run` | ✅ 66/66 |
+| 自研路线 15 套 | ✅ **全绿，227 项断言** |
+| `docs:sync` | ✅ 通过（无死链） |
+| `vite build` | ✅ 154 模块，产物正常（有 1 条 chunk 提示，见下） |
+| CLI 真实往返（2 层 + gzip，300 KB 随机文件） | ✅ 字节级一致 |
+
+### 两个环境坑（与本项目无关，但会让人误判，记录备查）
+
+本次检查用的**托管 Node 22.22.2** 有两个静默失败点，都会让"项目看起来是坏的"，实际换到项目文档指定的 **Node 24** 全部正常：
+
+1. **`spawnSync` 自我派生返回 `EBUSY`** —— 导致 `pnpm test:selfcrypto` / `pnpm test:cli` 整体误报失败（已按第 7 节改造汇总器，现在会明确提示是环境问题）。
+2. **`fs.cpSync(dir, dest, { recursive: true })` 静默退出 127、无任何输出** —— 导致 `docs:sync` 失败，进而 `pnpm build` 整条链在第一步就断掉。单文件 `cpSync` 正常，只有**目录递归**会崩。
+
+> 这两条都不是代码缺陷：`sync-docs.mjs` 只用了 `node:fs`；同样的脚本在 Node 24 上输出「已同步 8 篇文档 + 截图（链接校验通过）」。建议在普通终端用 Node 24 执行 `pnpm build` / `pnpm test:*`。
+
+**构建期的一条非致命提示**（未处理，留给作者判断）：`src/selfcrypto/watermark/extract.js` 被 `ai/report.js` 动态 import、同时被 `SelfWatermarkPage.tsx` 静态 import，Vite 提示"动态 import 无法把它拆到独立 chunk"。功能无影响，只是分包未达最优；若要消除，可把界面那侧也改成动态 import。
+
+---
+
 *本报告为独立复核产物，与 `docs/PROJECT-REPORT.md`（项目自述）互为补充：前者是"作者说它做到了什么"，本报告是"我从外部验证了哪些、以及哪里对不上"。*
