@@ -68,7 +68,7 @@ nonce = HKDF-SHA256(IKM = layer.n, salt = 主密钥, info = info, L = nonceLengt
 | --- | --- | --- | --- |
 | 0 | 6 | `magic` | ASCII `XUQIAN` |
 | 6 | 1 | `version` | 当前为 `1` |
-| 7 | 1 | `flags` | bit1 = `0x02` 表示容器内明文经过 gzip |
+| 7 | 1 | `flags` | bit1 = `0x02` 容器内明文经 gzip；bit2 = `0x04` **标识性元数据已加密**（见 `meta.x`）；bit3 = `0x08` **时间戳附加盐已启用**（域分离） |
 | 8 | 4 | `chunkSize` | 每块占用文件字节数的上限（默认 67108864 = 64 MiB） |
 | 12 | 4 | `chunkCount` | 块数量（最小 1；空文件也是 1 块） |
 | 16 | 1 | `layerCount` | 加密层数 1~10 |
@@ -92,8 +92,8 @@ nonce = HKDF-SHA256(IKM = layer.n, salt = 主密钥, info = info, L = nonceLengt
     { "a": "SM4-GCM",             "s": "...",               "n": "..." }
   ],
   "meta": {
-    "n":  "report.pdf",     // 原始文件名（解密后还原）
-    "m":  "application/pdf", // 原始 MIME
+    "n":  "report.pdf",     // 原始文件名（解密后还原）；**开启元数据加密后移入 meta.x**
+    "m":  "application/pdf", // 原始 MIME（同上）
     "s":  624,              // 容器内明文字节数（含声明；分块布局依赖它）
     "os": 3000,             // 原始字节数（仅在 gzip 时与 s 不同）
     "h":  "614FA9…C0E4",    // 容器内明文（声明 + 内容）的 SHA-256（大写 Hex）
@@ -102,7 +102,8 @@ nonce = HKDF-SHA256(IKM = layer.n, salt = 主密钥, info = info, L = nonceLengt
     "c":  "备注文本",         // 用户备注（可选）
     "nl": 485,              // 明文声明区里声明的字节数（须与文件偏移 7 处一致）
     "nh": "D808AAB4…4C2F", // 明文声明的 SHA-256（大写 Hex）：删改声明即解密失败
-    "exp": 1730100000000    // 到期提醒时间（可选，纯提示）
+    "exp": 1730100000000,   // 到期提醒时间（可选，纯提示）
+    "x":  "<base64>"        // （可选）标识性元数据密文 = AES-256-GCM(MEK, nonce, innerJson) + tag
   },
   "crc": 79261993           // 头部 CRC32（覆盖除 crc 外的全部字段）
 }
@@ -202,7 +203,40 @@ XUQIAN 认证加密文件 ｜ 由 XUQIAN 加密站（许七安密匣）在本地
 | `XCHACHA20-POLY1305` | 32 | 24 | 16 | `@noble/ciphers` |
 | `SM4-GCM` | 16 | 12 | 16 | 本项目 GB/T 32907 + SP 800-38D 实现 |
 
-### 2.4 AAD 构造
+### 2.4 元数据加密（`meta.x`，可选）
+
+简单路线默认开启「加密元数据」。开启后，**标识性字段**（`n` 原文件名、`m` MIME、`os` 原始大小、`c` 备注、`as` 伪装扩展名）被移出明文头部，收进一个密文块 `meta.x`：
+
+```
+innerJson = UTF-8(JSON({ n, m, os, c, as } 中存在的字段))
+meta.x    = base64( AES-256-GCM(MEK, metaNonce, innerJson, aad="XUQIAN/v1/meta|blob") )   // 含 16B tag
+MEK       = HKDF-SHA256(IKM=主密钥, salt=layers[0].salt, info="XUQIAN/v1/meta|key|v1", 32B)
+metaNonce = HKDF-SHA256(IKM=主密钥, salt=layers[0].salt, info="XUQIAN/v1/meta|nonce|v1", 12B)
+```
+
+要点：
+
+- **哪些字段加密是有讲究的**：解密本身依赖 `s`（分块布局）、`h`（内容哈希校验）、`nl`/`nh`（明文声明长度与校验）、`k`（bytes/text），因此这些**必须保持明文**；被加密的只是"信息性"字段。
+- `t`（创建时间）**有意保持明文**：它同时是「时间戳附加盐」的派生输入。若将来要连 `t` 一起隐藏，需把时间戳盐选项一并废止。
+- `meta.x` 本身参与头部 AAD（因为整个 `meta` 都进 AAD），因此篡改密文会先被 CRC32 或 AAD 拦下。
+- 解密顺序：**先算 AAD，再解 `meta.x` 并就地补字段**——`x` 不能删除（它已进 AAD）。
+- 错误密钥时 `meta.x` 解不开，与分块解密一样统一报 `AUTH_FAILED`，不引入新的 oracle。
+
+**兼容性**：未开启时不写 `x`、不置 `0x04` 位，与旧文件完全一致；解析端遇到 `x` 就解、没有就跳过。
+
+### 2.4.1 时间戳附加盐（`0x08`，可选，不提升安全性）
+
+开启后，把文件创建时间戳并进 HKDF 的 `info`：
+
+```
+context = "|ts:" + meta.t        // 仅当 flags 含 0x08
+子密钥 info = "XUQIAN/v1/subkey|{layer}|{algo}|{keyLen}|{kdfTag}" + context
+nonce  info = "XUQIAN/v1/nonce|{layer}|{chunk}|{len}" + context
+```
+
+**必须诚实说明**：时间戳要明文存进 `meta.t` 才能被解密端复现，因此这是**公开的低熵盐**，不提供任何机密性，也不增加爆破成本——攻击者本来就知道它。它的唯一正当用途是**域分离 / 来源标记**。默认关闭；默认 `context` 为空串，旧文件派生结果不变。
+
+### 2.5 AAD 构造
 
 ```
 AAD = magic(6) || version(1) || flags(1) || chunkSize(4) || chunkCount(4) || layerCount(1)
@@ -213,7 +247,7 @@ AAD = magic(6) || version(1) || flags(1) || chunkSize(4) || chunkCount(4) || lay
   `XCHACHA20-POLY1305`=3, `SM4-GCM`=4），**顺序不可调整**
 - `canonicalHeader`：`JSON.stringify` 出的规范化头部（字段顺序固定，`crc` 被排除）
 
-### 2.5 单块布局（关键）
+### 2.6 单块布局（关键）
 
 设 `L` = 层数，`pj` = 该块明文长度，`T` = 16（tag 长度）。
 
@@ -230,7 +264,7 @@ blockTotal = pj + (2L−1)×T    // 该块在文件中占用的字节数
 "下一层输入"的末尾**。容器只需额外保存第 `0…L−2` 层的 tag，第 `L−1` 层的 tag 已经在
 head 的末尾。
 
-### 2.6 加密流程
+### 2.7 加密流程
 
 ```
 输入：容器内明文 P（可能已 gzip），主密钥 K，层数组 algos[0..L-1]
@@ -251,7 +285,7 @@ head 的末尾。
 5. 文件 = 序列化头部 || 各块
 ```
 
-### 2.7 解密流程
+### 2.8 解密流程
 
 ```
 输入：.XUQIAN 文件字节，主密钥 K

@@ -18,6 +18,8 @@ export function TextTab() {
   const chunkSize = useApp((s) => s.chunkSize)
   const notice = useApp((s) => s.notice)
   const lang = useApp((s) => s.lang)
+  const encryptMeta = useApp((s) => s.encryptMeta)
+  const timestampSalt = useApp((s) => s.timestampSalt)
   const store = useApp()
 
   const [plain, setPlain] = useState('')
@@ -43,6 +45,8 @@ export function TextTab() {
         layers: textLayers,
         chunkSize,
         gzip,
+        encryptMeta,
+        timestampSalt,
         notice,
         lang,
         kind: 'text',

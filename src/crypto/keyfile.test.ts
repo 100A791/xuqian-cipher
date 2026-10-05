@@ -51,6 +51,30 @@ describe('.XUQIANKEY 密钥文件', () => {
     bytes.fill(0)
   })
 
+  it('口令轮换：换新口令后旧口令失效，主密钥与指纹不变', async () => {
+    const mk = MasterKey.generate()
+    const bytes = mk.clone()
+    const payload = await payloadFromBytes(bytes, { layers: ['AES-128-GCM'] })
+
+    // 旧：口令保护
+    const oldText = serializeKeyFile(await buildProtectedKeyFile(payload, 'old-passphrase-1'))
+
+    // 轮换：用旧口令解出负载，再用新口令重新封装（不触碰主密钥）
+    const recovered = await parseKeyFile(oldText, 'old-passphrase-1')
+    const rotatedText = serializeKeyFile(await buildProtectedKeyFile(recovered, 'new-passphrase-2'))
+
+    // 新口令可用，且还原出同一把主密钥
+    const after = await parseKeyFile(rotatedText, 'new-passphrase-2')
+    expect(after.keyHex).toBe(payload.keyHex)
+    expect(after.fingerprint).toBe(payload.fingerprint)
+
+    // 旧口令不再能解开新文件
+    await expect(parseKeyFile(rotatedText, 'old-passphrase-1')).rejects.toThrow('KEYFILE_PASSWORD_WRONG')
+
+    mk.destroy()
+    bytes.fill(0)
+  })
+
   it('明文密钥文件校验和被检测（防手改）', async () => {
     const mk = MasterKey.generate()
     const bytes = mk.clone()

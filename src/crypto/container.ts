@@ -36,10 +36,10 @@
  * pj + k×T、输出为 pj + (k+1)×T，因此每一层的 tag 都"内嵌"在下一层输入的末尾。
  * 块内只额外保存第 0…L−2 层的 tag（各 T 字节），第 L−1 层的 tag 已经在 head 末尾。
  */
-import { getAlgoSpec, isAlgoId, type AlgoId } from './aead.ts'
-import { concatBytes, base64ToBytes } from './encoding.ts'
+import { getAead, getAlgoSpec, isAlgoId, type AlgoId } from './aead.ts'
+import { concatBytes, base64ToBytes, bytesToBase64 } from './encoding.ts'
 import { MasterKey, SALT_BYTES } from './keys.ts'
-import { utf8ToBytes } from './zeroize.ts'
+import { utf8ToBytes, zeroize } from './zeroize.ts'
 import { bufferSource, collectingSink, decryptStream, encryptStream } from './stream.ts'
 
 export const MAGIC = 'XUQIAN'
@@ -53,6 +53,23 @@ export const EXT_KEYFILE = '.XUQIANKEY'
 export const TAG_BYTES = 16
 
 export const HEADER_FLAG_GZIP = 2 // 明文在加密前做过 gzip
+export const HEADER_FLAG_ENC_META = 4 // 标识性元数据已加密（见 meta.x）
+export const HEADER_FLAG_TS_SALT = 8 // 把文件创建时间戳并入了密钥派生的域分离串（不提升安全性，见下）
+
+/**
+ * 「时间戳附加盐」的派生上下文。
+ *
+ * 诚实说明：时间戳必须明文存在文件头里才能被解密端复现，因此**公开的低熵盐不提供任何
+ * 机密性**，也无法提高爆破成本——攻击者本来就知道它。本选项的唯一正当用途是
+ * **域分离 / 来源标记**：让同一把主密钥在不同创建时间的文件上派生出不同子密钥。
+ *
+ * 它绝不会、也不能替代 CSPRNG 的随机性。
+ */
+export function tsSaltContext(flags: number, meta: XuqianMeta): string {
+  if ((flags & HEADER_FLAG_TS_SALT) === 0) return ''
+  const t = typeof meta.t === 'number' && Number.isFinite(meta.t) ? meta.t : 0
+  return `|ts:${t}`
+}
 
 /** 固定头长度（到 layerCount 为止，不含 headerLen 与 headerJson）。 */
 export const HEADER_FIXED_LEN = MAGIC_BYTES.length + 1 + 1 + 4 + 4 + 1
@@ -92,6 +109,90 @@ export interface XuqianMeta {
   exp?: number
   /** 伪装扩展名提示（P2） */
   as?: string
+  /** 加密元数据密文（base64 = AES-256-GCM(MEK, 私有字段 JSON) + tag）。
+   *  存在即表示标识性字段（见 PRIVATE_META_FIELDS）已被移入此处，
+   *  没有主密钥读不出原文件名等信息。它本身参与 AAD，篡改即解密失败。 */
+  x?: string
+}
+
+/**
+ * 会被纳入加密的「标识性」元数据字段。
+ *
+ * 为什么只加密这些：解密过程本身依赖 `s`（分块布局）、`h`（内容哈希校验）、
+ * `nl`/`nh`（明文声明长度与校验）、`k`（bytes/text）等字段，
+ * 它们必须保持明文才能在没有密钥时完成文件结构解析与密钥自检。
+ * 而被列入此表的字段纯粹是"信息"，加密后不影响解密流程。
+ *
+ * 注意 `t`（创建时间）有意保持明文：它同时被「时间戳附加盐」选项用作派生输入，
+ * 且文件系统层面通常已暴露修改时间，加密它的收益有限。
+ */
+export const PRIVATE_META_FIELDS = ['n', 'm', 'os', 'c', 'as'] as const
+
+/** 元数据密文的域分离 AAD（固定值；额外的完整性由文件头 AAD 保证）。 */
+const META_BLOB_AAD = utf8ToBytes('XUQIAN/v1/meta|blob')
+
+function isPrivateField(key: string): boolean {
+  return (PRIVATE_META_FIELDS as readonly string[]).includes(key)
+}
+
+/**
+ * 把标识性元数据加密进 `meta.x`，返回只含公开字段的新 meta。
+ * salt 为首层 salt（随文件存储的随机 16 字节）。
+ */
+export async function sealPrivateMeta(
+  meta: XuqianMeta,
+  masterKey: MasterKey,
+  salt: Uint8Array,
+): Promise<XuqianMeta> {
+  const priv: Record<string, unknown> = {}
+  const pub: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(meta)) {
+    if (value === undefined) continue
+    if (isPrivateField(key)) priv[key] = value
+    else pub[key] = value
+  }
+  if (Object.keys(priv).length === 0) return pub as XuqianMeta
+
+  const key = masterKey.deriveMetaKey(salt)
+  const nonce = masterKey.deriveMetaNonce(salt)
+  const plain = utf8ToBytes(JSON.stringify(priv))
+  let sealed: Uint8Array
+  try {
+    sealed = await getAead('AES-256-GCM').seal(key, nonce, plain, META_BLOB_AAD)
+  } finally {
+    zeroize(key, nonce, plain)
+  }
+  pub.x = bytesToBase64(sealed)
+  return pub as XuqianMeta
+}
+
+/**
+ * 解密 `meta.x` 并把字段并回 meta。
+ *
+ * 只做「就地补齐」：不解密、不删除 `x` —— 因为它已经参与文件头 AAD，
+ * 改动它会破坏整份文件的认证。调用方必须**先**算好 aad 再调用本函数。
+ */
+export async function openPrivateMeta(meta: XuqianMeta, masterKey: MasterKey, salt: Uint8Array): Promise<void> {
+  if (typeof meta.x !== 'string' || meta.x.length === 0) return
+  const key = masterKey.deriveMetaKey(salt)
+  const nonce = masterKey.deriveMetaNonce(salt)
+  let plain: Uint8Array
+  try {
+    plain = await getAead('AES-256-GCM').open(key, nonce, base64ToBytes(meta.x), META_BLOB_AAD)
+  } catch {
+    // 与分块解密保持同一口径：绝不区分"密钥错误"与"元数据损坏"
+    throw new Error('AUTH_FAILED')
+  } finally {
+    zeroize(key, nonce)
+  }
+  try {
+    const priv = JSON.parse(new TextDecoder().decode(plain)) as Record<string, unknown>
+    Object.assign(meta, priv)
+  } catch {
+    throw new Error('AUTH_FAILED')
+  } finally {
+    zeroize(plain)
+  }
 }
 
 export interface XuqianLayerHeader {
@@ -403,6 +504,10 @@ export interface EngineOptions {
   chunkSize?: number
   gzip?: boolean
   meta?: XuqianMeta
+  /** 是否把标识性元数据（原文件名 / MIME / 备注…）加密进 meta.x */
+  encryptMeta?: boolean
+  /** 「时间戳附加盐」：把创建时间戳并入派生（域分离）。不提升安全性 */
+  timestampSalt?: boolean
   onProgress?: (doneBytes: number, totalBytes: number, phase: 'encrypt' | 'decrypt') => void
   /** 随机字节源（默认 CSPRNG；测试可注入确定性序列以获得可复现的密文） */
   randomFn?: (length: number) => Uint8Array
@@ -437,6 +542,8 @@ export async function encryptContainer(
     chunkSize: options.chunkSize,
     gzip: options.gzip,
     meta: options.meta,
+    encryptMeta: options.encryptMeta,
+    timestampSalt: options.timestampSalt,
     onProgress: options.onProgress
       ? (done, total) => options.onProgress?.(done, total, 'encrypt')
       : undefined,
@@ -480,10 +587,13 @@ export function describeHeader(header: XuqianHeader): Array<{ key: string; value
     { key: 'layers', value: String(header.lc) },
     { key: 'algorithms', value: header.layers.map((l) => l.a).join(' → ') },
     { key: 'chunks', value: `${header.cc} × ${header.cs} B` },
-    { key: 'flags', value: header.flags & HEADER_FLAG_GZIP ? 'gzip' : '-' },
+    { key: 'flags', value: [header.flags & HEADER_FLAG_GZIP ? 'gzip' : '', header.flags & HEADER_FLAG_ENC_META ? 'enc-meta' : ''].filter(Boolean).join(',') || '-' },
     { key: 'headerCrc', value: `0x${header.crc.toString(16).padStart(8, '0')}` },
   ]
   const meta = header.meta ?? {}
+  if (typeof meta.x === 'string' && meta.x.length > 0) {
+    rows.push({ key: 'metaEncrypted', value: '是（原文件名等需主密钥才能读取）' })
+  }
   if (meta.n) rows.push({ key: 'originalName', value: meta.n })
   if (meta.m) rows.push({ key: 'originalMime', value: meta.m })
   if (typeof meta.s === 'number') rows.push({ key: 'originalSize', value: `${meta.s} B` })

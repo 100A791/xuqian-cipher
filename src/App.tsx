@@ -1,11 +1,13 @@
 /** 应用外壳：开始页（加密路线二选一）、品牌头、四个主 Tab、主题/语言开关、快捷键、合规页脚。 */
 import { useEffect } from 'react'
 import { useApp, syncDocumentChrome, type TabKey } from './app/store.ts'
+import { useAutoLock } from './app/useAutoLock.ts'
 import { EncryptTab } from './components/EncryptTab.tsx'
 import { DecryptTab } from './components/DecryptTab.tsx'
 import { TextTab } from './components/TextTab.tsx'
 import { ToolsTab } from './components/ToolsTab.tsx'
 import { KeyModal } from './components/KeyModal.tsx'
+import { LockScreen } from './components/LockScreen.tsx'
 import { StartScreen } from './components/StartScreen.tsx'
 import { SelfHome } from './components/selfcrypto/SelfHome.tsx'
 import { SelfFilePage } from './components/selfcrypto/SelfFilePage.tsx'
@@ -26,6 +28,9 @@ export function App() {
   const selfTab = useApp((s) => s.selfTab)
   const keyModalOpen = useApp((s) => s.keyModal.open)
   const store = useApp()
+
+  // 空闲自动锁定（0 = 关闭）
+  useAutoLock()
 
   useEffect(() => {
     syncDocumentChrome()
@@ -62,7 +67,14 @@ export function App() {
   }, [store, keyModalOpen])
 
   // 还没选加密路线 → 先显示开始页
-  if (mode === null) return <StartScreen />
+  if (mode === null) {
+    return (
+      <>
+        <StartScreen />
+        <LockScreen />
+      </>
+    )
+  }
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-4 px-3 py-4 sm:px-5 sm:py-6">
@@ -78,6 +90,15 @@ export function App() {
         <div className="flex items-center gap-2">
           <button type="button" className="xq-btn text-xs" data-testid="mode-switch" onClick={() => store.setMode(null)}>
             {t('start.switch')}
+          </button>
+          <button
+            type="button"
+            className="xq-btn text-xs"
+            title={t('lock.buttonHint')}
+            data-testid="lock-now"
+            onClick={() => store.lockNow()}
+          >
+            {t('lock.button')}
           </button>
           <button
             type="button"
@@ -145,6 +166,7 @@ export function App() {
       </footer>
 
       <KeyModal />
+      <LockScreen />
     </div>
   )
 }

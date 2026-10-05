@@ -30,6 +30,8 @@ export function EncryptTab() {
   const files = useApp((s) => s.encryptFiles)
   const layers = useApp((s) => s.layers)
   const gzip = useApp((s) => s.gzip)
+  const encryptMeta = useApp((s) => s.encryptMeta)
+  const timestampSalt = useApp((s) => s.timestampSalt)
   const note = useApp((s) => s.note)
   const notice = useApp((s) => s.notice)
   const lang = useApp((s) => s.lang)
@@ -103,6 +105,8 @@ export function EncryptTab() {
           layers,
           chunkSize,
           gzip,
+          encryptMeta,
+          timestampSalt,
           note: note || undefined,
           notice,
           lang,
@@ -306,6 +310,32 @@ export function EncryptTab() {
               <span>
                 {t('encrypt.gzip')}
                 <span className="block text-[11px] xq-muted">{t('encrypt.gzip.hint')}</span>
+              </span>
+            </label>
+
+            <label className="flex items-start gap-2 text-xs">
+              <input
+                type="checkbox"
+                checked={encryptMeta}
+                disabled={encrypting}
+                onChange={(event) => store.setEncryptMeta(event.target.checked)}
+              />
+              <span>
+                {t('encrypt.encryptMeta')}
+                <span className="block text-[11px] xq-muted">{t('encrypt.encryptMeta.hint')}</span>
+              </span>
+            </label>
+
+            <label className="flex items-start gap-2 text-xs">
+              <input
+                type="checkbox"
+                checked={timestampSalt}
+                disabled={encrypting}
+                onChange={(event) => store.setTimestampSalt(event.target.checked)}
+              />
+              <span>
+                {t('encrypt.timestampSalt')}
+                <span className="block text-[11px] xq-muted">{t('encrypt.timestampSalt.hint')}</span>
               </span>
             </label>
 

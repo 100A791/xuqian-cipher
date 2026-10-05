@@ -11,6 +11,12 @@ export const KEY_ID_BYTES = 8
 export const KDF_INFO_ROOT = 'XUQIAN/v1/master'
 export const KDF_INFO_SUBKEY = 'XUQIAN/v1/subkey'
 export const KDF_INFO_NONCE = 'XUQIAN/v1/nonce'
+export const KDF_INFO_META = 'XUQIAN/v1/meta'
+
+/** 元数据加密密钥（MEK）长度。 */
+export const META_KEY_BYTES = 32
+/** 元数据加密用的 GCM nonce 长度。 */
+export const META_NONCE_BYTES = 12
 
 /** 从 CSPRNG 取随机字节。 */
 export function randomBytes(length: number): Uint8Array {
@@ -87,11 +93,12 @@ export class MasterKey {
   /**
    * HKDF-SHA256 派生每层子密钥。
    * info 中绑定：层序号 + 算法 ID + 密钥长度，确保"换算法/换顺序"会得到不同子密钥。
+   * `context` 为可选的附加域分离串（见「时间戳附加盐」）；默认空串，保持旧文件派生不变。
    */
-  deriveSubkey(algo: AlgoId, layerIndex: number, salt: Uint8Array): Uint8Array {
+  deriveSubkey(algo: AlgoId, layerIndex: number, salt: Uint8Array, context = ''): Uint8Array {
     this.#assertAlive()
     const spec = getAlgoSpec(algo)
-    const info = utf8ToBytes(`${KDF_INFO_SUBKEY}|${layerIndex}|${algo}|${spec.keyLength}|${spec.kdfTag}`)
+    const info = utf8ToBytes(`${KDF_INFO_SUBKEY}|${layerIndex}|${algo}|${spec.keyLength}|${spec.kdfTag}${context}`)
     return hkdf(sha256, this.#bytes, salt, info, spec.keyLength)
   }
 
@@ -100,11 +107,31 @@ export class MasterKey {
    * nonce_i = HKDF(IKM = nonceSalt, salt = 主密钥, info = "XUQIAN/v1/nonce|layer|chunk|len")
    * 主密钥仍然参与，保证 (子密钥, nonce) 组合在每个分块之间唯一，绝不重复。
    */
-  deriveNonce(algo: AlgoId, layerIndex: number, chunkIndex: number, nonceSalt: Uint8Array): Uint8Array {
+  deriveNonce(algo: AlgoId, layerIndex: number, chunkIndex: number, nonceSalt: Uint8Array, context = ''): Uint8Array {
     this.#assertAlive()
     const spec = getAlgoSpec(algo)
-    const info = utf8ToBytes(`${KDF_INFO_NONCE}|${layerIndex}|${chunkIndex}|${spec.nonceLength}`)
+    const info = utf8ToBytes(`${KDF_INFO_NONCE}|${layerIndex}|${chunkIndex}|${spec.nonceLength}${context}`)
     return hkdf(sha256, nonceSalt, this.#bytes, info, spec.nonceLength)
+  }
+
+  /**
+   * 派生「元数据加密密钥」（MEK）。
+   *
+   * 用途：把**标识性**元数据（原文件名 / MIME / 备注…）也纳入机密性保护，
+   * 使拿到密文但没有主密钥的人连"这是什么文件"都读不到。
+   * 与子密钥用不同的 info 做域分离，salt 复用随文件存储的首层 salt（salt 非机密）。
+   */
+  deriveMetaKey(salt: Uint8Array): Uint8Array {
+    this.#assertAlive()
+    const info = utf8ToBytes(`${KDF_INFO_META}|key|v1`)
+    return hkdf(sha256, this.#bytes, salt, info, META_KEY_BYTES)
+  }
+
+  /** 元数据加密专用的 GCM nonce（与 MEK 同源、不同 info）。 */
+  deriveMetaNonce(salt: Uint8Array): Uint8Array {
+    this.#assertAlive()
+    const info = utf8ToBytes(`${KDF_INFO_META}|nonce|v1`)
+    return hkdf(sha256, this.#bytes, salt, info, META_NONCE_BYTES)
   }
 
   /** 密钥指纹：SHA-256 前 8 字节的十六进制大写（用于用户确认密钥是否正确）。 */

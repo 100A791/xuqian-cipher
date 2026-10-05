@@ -19,7 +19,9 @@ import { getAead, getAlgoSpec, type AlgoId } from './aead.ts'
 import {
   DEFAULT_CHUNK_SIZE,
   FORMAT_VERSION,
+  HEADER_FLAG_ENC_META,
   HEADER_FLAG_GZIP,
+  HEADER_FLAG_TS_SALT,
   HEADER_FIXED_LEN,
   HEADER_LEN_OFFSET,
   MAX_LAYERS,
@@ -28,9 +30,12 @@ import {
   FormatError,
   hasMagic,
   headerAad,
+  openPrivateMeta,
   parseHeader,
   planChunks,
+  sealPrivateMeta,
   serializeHeader,
+  tsSaltContext,
   type ChunkPlan,
   type XuqianHeader,
   type XuqianMeta,
@@ -58,9 +63,19 @@ export interface StreamEncryptOptions {
   /** 声明"容器内明文来自 gzip 压缩"。引擎不做压缩，由调用方负责 */
   gzip?: boolean
   meta?: XuqianMeta
+  /**
+   * 是否把**标识性元数据**（原文件名 / MIME / 备注…）加密进 `meta.x`。
+   * 开启后，拿到密文但没有主密钥的人无法读出原文件名等信息。
+   */
+  encryptMeta?: boolean
   onProgress?: ProgressFn
   /** 随机字节源（默认 CSPRNG；测试可注入确定性序列） */
   randomFn?: (length: number) => Uint8Array
+  /**
+   * 「时间戳附加盐」：把创建时间戳并入派生（域分离）。**不提升安全性**，
+   * 见 container.ts 的 tsSaltContext 说明。
+   */
+  timestampSalt?: boolean
   /**
    * 强制重新扫描内容并重算 `meta.h`（覆盖调用方传入的值）。
    * 内存适配器使用它来保持"哈希永远取自实际内容"的旧语义。
@@ -304,7 +319,10 @@ export async function encryptStream(
   if (tagsPerChunk !== layerCount * TAG_BYTES) throw new Error('UNSUPPORTED_TAG_LENGTH')
 
   const chunkSize = Math.max(tagsPerChunk + 1, options.chunkSize ?? DEFAULT_CHUNK_SIZE)
-  const flags = options.gzip ? HEADER_FLAG_GZIP : 0
+  const flags =
+    (options.gzip ? HEADER_FLAG_GZIP : 0) |
+    (options.encryptMeta ? HEADER_FLAG_ENC_META : 0) |
+    (options.timestampSalt ? HEADER_FLAG_TS_SALT : 0)
   const plaintextLength = options.plaintextLength
   if (!Number.isSafeInteger(plaintextLength) || plaintextLength < 0) throw new FormatError('META_SIZE_INVALID')
 
@@ -319,13 +337,26 @@ export async function encryptStream(
   const sourceHash = providedHash ?? (await hashSource(source, plaintextLength)).hash
 
   // 2) 每层随机 salt 与 nonce 种子 → 派生子密钥
+  //    「时间戳附加盐」开启时，把创建时间戳并入域分离串（必须与解密端一致）。
+  const saltTs =
+    options.timestampSalt === true
+      ? typeof options.meta?.t === 'number' && Number.isFinite(options.meta.t)
+        ? options.meta.t
+        : Date.now()
+      : null
+  const ctx = saltTs === null ? '' : `|ts:${saltTs}`
   const random = options.randomFn ?? randomBytes
   const layers = algos.map((algo, index) => {
     const salt = random(SALT_BYTES)
     const nonceSeed = random(SALT_BYTES)
-    return { algo, salt, nonceSeed, subkey: masterKey.deriveSubkey(algo, index, salt) }
+    return { algo, salt, nonceSeed, subkey: masterKey.deriveSubkey(algo, index, salt, ctx) }
   })
 
+  // 3) 组装头部元数据：加密开启时，把标识性字段移入 meta.x（必须在算 AAD 之前完成）
+  const baseMeta: XuqianMeta = { ...options.meta, s: plaintextLength, h: sourceHash }
+  if (saltTs !== null && typeof options.meta?.t !== 'number') baseMeta.t = saltTs
+  let meta: XuqianMeta = baseMeta
+  if (options.encryptMeta) meta = await sealPrivateMeta(meta, masterKey, layers[0].salt)
   const header: XuqianHeader = {
     v: FORMAT_VERSION,
     flags,
@@ -333,7 +364,7 @@ export async function encryptStream(
     cc: plan.chunkCount,
     lc: layerCount,
     layers: layers.map((l) => ({ a: l.algo, s: bytesToBase64(l.salt), n: bytesToBase64(l.nonceSeed) })),
-    meta: { ...options.meta, s: plaintextLength, h: sourceHash },
+    meta,
     crc: 0,
   }
   const aad = headerAad(header)
@@ -357,7 +388,7 @@ export async function encryptStream(
       const layerTags: Uint8Array[] = []
       for (let layerIndex = 0; layerIndex < layerCount; layerIndex++) {
         const layer = layers[layerIndex]
-        const nonce = masterKey.deriveNonce(layer.algo, layerIndex, chunkIndex, layer.nonceSeed)
+        const nonce = masterKey.deriveNonce(layer.algo, layerIndex, chunkIndex, layer.nonceSeed, ctx)
         const sealed = await getAead(layer.algo).seal(layer.subkey, nonce, current, aad)
         zeroize(nonce)
         if (sealed.length !== current.length + TAG_BYTES) throw new Error('AEAD_LENGTH_MISMATCH')
@@ -432,6 +463,11 @@ export async function decryptStream(
   if (plan.chunkCount !== header.cc) throw new FormatError('CHUNK_LAYOUT_INVALID')
 
   const aad = headerAad(header)
+  // 「时间戳附加盐」的派生上下文（必须与加密端完全一致）
+  const ctx = tsSaltContext(header.flags, header.meta)
+  // 解密标识性元数据（若存在）。必须在算完 aad 之后：openPrivateMeta 会就地补字段
+  // （原文件名等），而 aad 已物化为字节，不受后续 meta 变更影响。
+  await openPrivateMeta(header.meta, masterKey, base64ToBytes(header.layers[0].s))
   // 注意：子密钥不再一次性全部派生，而是由 openBlock 按块派生并立即擦除，
   // 这样"同时驻留的子密钥数量"从 L 个降到 1 个（大文件多层时内存与暴露面都更小）。
 
@@ -440,7 +476,7 @@ export async function decryptStream(
     for (let chunkIndex = 0; chunkIndex < plan.chunkCount; chunkIndex++) {
       const plainSize = plan.plainSizes[chunkIndex]
       const block = await reader.readExactly(plan.blockTotals[chunkIndex])
-      const payload = await openBlock(header, block, plainSize, chunkIndex, aad, masterKey)
+      const payload = await openBlock(header, block, plainSize, chunkIndex, aad, masterKey, ctx)
 
       await sink.write(payload)
       zeroize(payload)
@@ -470,6 +506,7 @@ async function openBlock(
   chunkIndex: number,
   aad: Uint8Array,
   masterKey: MasterKey,
+  ctx = '',
 ): Promise<Uint8Array> {
   const layerCount = header.layers.length
   const headLen = plainSize + layerCount * TAG_BYTES
@@ -480,8 +517,8 @@ async function openBlock(
     const tag = block.subarray(tagPos, tagPos + TAG_BYTES)
     const inputLen = plainSize + layerIndex * TAG_BYTES
     const sealed = concatBytes(payload.subarray(0, inputLen), tag)
-    const subkey = masterKey.deriveSubkey(layer.a, layerIndex, base64ToBytes(layer.s))
-    const nonce = masterKey.deriveNonce(layer.a, layerIndex, chunkIndex, base64ToBytes(layer.n))
+    const subkey = masterKey.deriveSubkey(layer.a, layerIndex, base64ToBytes(layer.s), ctx)
+    const nonce = masterKey.deriveNonce(layer.a, layerIndex, chunkIndex, base64ToBytes(layer.n), ctx)
     let out: Uint8Array
     try {
       out = await getAead(layer.a).open(subkey, nonce, sealed, aad)
@@ -567,7 +604,7 @@ export async function keyCheck(
   const block = await reader.readExactly(plan.blockTotals[0])
   const aad = headerAad(header)
   try {
-    const plain = await openBlock(header, block, plan.plainSizes[0], 0, aad, masterKey)
+    const plain = await openBlock(header, block, plan.plainSizes[0], 0, aad, masterKey, tsSaltContext(header.flags, header.meta))
     zeroize(plain)
   } catch (error) {
     if (/AUTH_FAILED/.test(String((error as Error)?.message ?? error))) {

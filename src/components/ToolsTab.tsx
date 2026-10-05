@@ -6,9 +6,11 @@ import { cryptoClient } from '../worker/client.ts'
 import { combineShares, decodeShare, type ShamirShare } from '../crypto/shamir.ts'
 import { bytesToHex } from '../crypto/encoding.ts'
 import { MasterKey } from '../crypto/keys.ts'
-import { buildPlainKeyFile, payloadFromBytes, serializeKeyFile } from '../crypto/keyfile.ts'
+import { buildPlainKeyFile, buildProtectedKeyFile, parseKeyFile, payloadFromBytes, serializeKeyFile } from '../crypto/keyfile.ts'
+import { errorMessageKey } from '../app/i18n.ts'
 import { describeHeader, parseHeader, EXT_KEYFILE, type XuqianHeader } from '../crypto/container.ts'
-import { Alert, Field, Panel, Stat } from './ui.tsx'
+import { Alert, Field, Panel } from './ui.tsx'
+import { PassphraseMeter } from './PassphraseMeter.tsx'
 
 const SYMBOLS = '!@#$%^&*()-_=+[]{};:,.?/'
 
@@ -20,18 +22,7 @@ function randomFrom(chars: string, length: number): string {
   return out
 }
 
-function passwordStrength(password: string): { score: number; label: string } {
-  let score = 0
-  if (password.length >= 8) score++
-  if (password.length >= 12) score++
-  if (password.length >= 16) score++
-  if (/[a-z]/.test(password)) score++
-  if (/[A-Z]/.test(password)) score++
-  if (/\d/.test(password)) score++
-  if (/[^A-Za-z0-9]/.test(password)) score++
-  const label = score <= 2 ? '弱' : score <= 4 ? '中' : score <= 6 ? '强' : '很强'
-  return { score: Math.min(100, Math.round((score / 7) * 100)), label }
-}
+
 
 export function ToolsTab() {
   const t = useApp((s) => s.t)
@@ -39,6 +30,7 @@ export function ToolsTab() {
   const theme = useApp((s) => s.theme)
   const lang = useApp((s) => s.lang)
   const clipboardClear = useApp((s) => s.clipboardClear)
+  const autoLockMinutes = useApp((s) => s.autoLockMinutes)
   const store = useApp()
 
   const [length, setLength] = useState(20)
@@ -59,7 +51,11 @@ export function ToolsTab() {
   const [shareText, setShareText] = useState('')
   const [recovered, setRecovered] = useState<{ hex: string; base64: string; fingerprint: string } | null>(null)
 
-  const strength = useMemo(() => passwordStrength(password), [password])
+  const [rotateFile, setRotateFile] = useState<File | null>(null)
+  const [rotateOldPw, setRotateOldPw] = useState('')
+  const [rotateNewPw, setRotateNewPw] = useState('')
+  const [rotateNewPw2, setRotateNewPw2] = useState('')
+  const [rotateDone, setRotateDone] = useState<string | null>(null)
   const headerRows = useMemo(() => (header ? describeHeader(header) : []), [header])
 
   const generatePassword = () => {
@@ -148,6 +144,35 @@ export function ToolsTab() {
     }
   }
 
+  /**
+   * 密钥轮换：只更换密钥文件的口令，不重加密数据。
+   * 主密钥本身不变 → 已有 .XUQIAN 文件继续可用，指纹也不变（便于核验）。
+   */
+  const rotateKeyFile = async () => {
+    if (!rotateFile) return
+    setBusy(true)
+    setError(null)
+    setRotateDone(null)
+    try {
+      if (rotateNewPw !== rotateNewPw2) throw new Error('KEYFILE_PASSWORD_REQUIRED')
+      if (rotateNewPw && rotateNewPw.length < 8) throw new Error('KEYFILE_PASSWORD_REQUIRED')
+      const payload = await parseKeyFile(await rotateFile.text(), rotateOldPw || undefined)
+      const rotated = rotateNewPw ? await buildProtectedKeyFile(payload, rotateNewPw) : buildPlainKeyFile(payload)
+      const base = rotateFile.name.replace(/\.XUQIANKEY$/i, '') || 'xuqian-key'
+      const outName = `${base}.rotated${EXT_KEYFILE}`
+      saveText(serializeKeyFile(rotated), outName, 'application/json;charset=utf-8')
+      store.logEvent('keyGen', `轮换密钥文件口令（指纹 ${payload.fingerprint}），主密钥未改变`)
+      setRotateOldPw('')
+      setRotateNewPw('')
+      setRotateNewPw2('')
+      setRotateDone(`${t('tools.rotate.done')} ${outName}（${t('key.fingerprint')} ${payload.fingerprint}）`)
+    } catch (err) {
+      setError(t(errorMessageKey(err)))
+    } finally {
+      setBusy(false)
+    }
+  }
+
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <Panel className="space-y-3">
@@ -186,7 +211,7 @@ export function ToolsTab() {
         {password ? (
           <div className="space-y-1">
             <div className="xq-input xq-mono break-all text-xs">{password}</div>
-            <Stat label={t('tools.strength')} value={`${strength.label} · ${strength.score}`} />
+            <PassphraseMeter password={password} />
           </div>
         ) : null}
         <Alert tone="info">密码由 crypto.getRandomValues 生成，仅在你的浏览器内产生，不会被记录。</Alert>
@@ -305,6 +330,56 @@ export function ToolsTab() {
       </Panel>
 
       <Panel className="space-y-3">
+        <h2 className="text-sm font-semibold">{t('tools.rotate')}</h2>
+        <p className="text-[11px] xq-muted">{t('tools.rotate.hint')}</p>
+        <Field label={t('tools.rotate.file')}>
+          <input
+            type="file"
+            accept=".XUQIANKEY,application/json"
+            className="xq-input"
+            onChange={(event) => {
+              setRotateFile(event.target.files?.[0] ?? null)
+              setRotateDone(null)
+            }}
+          />
+        </Field>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <Field label={t('tools.rotate.old')}>
+            <input
+              type="password"
+              className="xq-input"
+              value={rotateOldPw}
+              autoComplete="current-password"
+              onChange={(event) => setRotateOldPw(event.target.value)}
+            />
+          </Field>
+          <Field label={t('tools.rotate.new')} hint={t('tools.rotate.newHint')}>
+            <input
+              type="password"
+              className="xq-input"
+              value={rotateNewPw}
+              autoComplete="new-password"
+              onChange={(event) => setRotateNewPw(event.target.value)}
+            />
+          </Field>
+        </div>
+        <PassphraseMeter password={rotateNewPw} />
+        <Field label={t('tools.rotate.newConfirm')}>
+          <input
+            type="password"
+            className="xq-input"
+            value={rotateNewPw2}
+            autoComplete="new-password"
+            onChange={(event) => setRotateNewPw2(event.target.value)}
+          />
+        </Field>
+        <button type="button" className="xq-btn xq-btn-primary w-full" disabled={busy || !rotateFile} onClick={() => void rotateKeyFile()}>
+          {t('tools.rotate.run')}
+        </button>
+        {rotateDone ? <Alert tone="ok">{rotateDone}</Alert> : null}
+      </Panel>
+
+      <Panel className="space-y-3">
         <h2 className="text-sm font-semibold">{t('tools.settings')}</h2>
         <div className="flex flex-wrap gap-2">
           <button
@@ -336,6 +411,21 @@ export function ToolsTab() {
               onChange={(event) => store.setClipboardClear(event.target.checked)}
             />
             {t('key.copyClear')}
+          </label>
+          <label className="xq-btn cursor-pointer">
+            {t('settings.autoLock')}
+            <select
+              className="xq-input ml-1 inline-block w-auto py-0.5"
+              value={autoLockMinutes}
+              onChange={(event) => store.setAutoLockMinutes(Number(event.target.value))}
+            >
+              <option value={0}>{t('settings.autoLock.off')}</option>
+              <option value={1}>1 {t('settings.minutes')}</option>
+              <option value={5}>5 {t('settings.minutes')}</option>
+              <option value={15}>15 {t('settings.minutes')}</option>
+              <option value={30}>30 {t('settings.minutes')}</option>
+              <option value={60}>60 {t('settings.minutes')}</option>
+            </select>
           </label>
         </div>
         <Alert tone="info" title={t('tools.about')}>

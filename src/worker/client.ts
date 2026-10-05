@@ -16,6 +16,10 @@ export interface EncryptRequest {
   layers: AlgoId[]
   chunkSize?: number
   gzip?: boolean
+  /** 是否加密标识性元数据（原文件名 / MIME / 备注…），默认由调用方决定 */
+  encryptMeta?: boolean
+  /** 时间戳附加盐（域分离，不提升安全性） */
+  timestampSalt?: boolean
   note?: string
   /** 加密声明文本；留空则回退默认（本站不提供"不写声明"的选项） */
   notice?: string

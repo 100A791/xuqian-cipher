@@ -9,6 +9,7 @@
 import { create } from 'zustand'
 import type { AlgoId } from '../crypto/aead.ts'
 import type { KeyView } from '../worker/crypto.worker.ts'
+import { cryptoClient } from '../worker/client.ts'
 import { type Lang, translate, type MessageKey } from './i18n.ts'
 
 export type Theme = 'dark' | 'light'
@@ -69,6 +70,12 @@ interface PersistedSettings {
   theme: Theme
   lang: Lang
   clipboardClear: boolean
+  /** 加密标识性元数据（原文件名 / MIME / 备注…），默认开启 */
+  encryptMeta: boolean
+  /** 时间戳附加盐（仅域分离，不提升安全性），默认关闭 */
+  timestampSalt: boolean
+  /** 空闲自动锁定：无操作达到该分钟数即锁定；0 = 关闭 */
+  autoLockMinutes: number
   /** 开始页选择的加密路线；null = 还没选过（下次仍显示开始页） */
   mode: CryptoMode | null
 }
@@ -95,15 +102,27 @@ const LOG_KEY = 'xuqian.log.v1'
 const LOG_LIMIT = 200
 
 function loadSettings(): PersistedSettings {
-  const fallback: PersistedSettings = { theme: 'dark', lang: 'zh', clipboardClear: true, mode: null }
+  const fallback: PersistedSettings = {
+    theme: 'dark',
+    lang: 'zh',
+    clipboardClear: true,
+    encryptMeta: true,
+    timestampSalt: false,
+    autoLockMinutes: 5,
+    mode: null,
+  }
   try {
     const raw = localStorage.getItem(SETTINGS_KEY)
     if (!raw) return fallback
     const parsed = JSON.parse(raw) as Partial<PersistedSettings>
+    const autoLock = Number(parsed.autoLockMinutes)
     return {
       theme: parsed.theme === 'light' ? 'light' : 'dark',
       lang: parsed.lang === 'en' ? 'en' : 'zh',
       clipboardClear: parsed.clipboardClear !== false,
+      encryptMeta: parsed.encryptMeta !== false,
+      timestampSalt: parsed.timestampSalt === true,
+      autoLockMinutes: Number.isFinite(autoLock) && autoLock >= 0 && autoLock <= 120 ? autoLock : fallback.autoLockMinutes,
       mode: parsed.mode === 'self' ? 'self' : parsed.mode === 'simple' ? 'simple' : null,
     }
   } catch {
@@ -159,6 +178,14 @@ export interface AppState {
   /** 自研路线内部的当前页面 */
   selfTab: SelfTab
   clipboardClear: boolean
+  /** 加密标识性元数据（原文件名 / MIME / 备注…） */
+  encryptMeta: boolean
+  /** 时间戳附加盐（域分离，不提升安全性） */
+  timestampSalt: boolean
+  /** 空闲自动锁定分钟数；0 = 关闭 */
+  autoLockMinutes: number
+  /** 会话锁定态：锁定后一次性密钥视图与已解出明文一律清空 */
+  locked: boolean
   log: LogEntry[]
 
   // 加密面板
@@ -188,6 +215,13 @@ export interface AppState {
   setMode: (mode: CryptoMode | null) => void
   setSelfTab: (tab: SelfTab) => void
   setClipboardClear: (value: boolean) => void
+  setEncryptMeta: (value: boolean) => void
+  setTimestampSalt: (value: boolean) => void
+  setAutoLockMinutes: (value: number) => void
+  /** 立即锁定会话（空闲超时或用户手动触发） */
+  lockNow: () => void
+  /** 解除锁定态（密钥已销毁，用户需重新导入密钥才能继续） */
+  setLocked: (value: boolean) => void
   t: (key: MessageKey) => string
 
   logEvent: (action: LogEntry['action'], detail: string, level?: LogEntry['level']) => void
@@ -226,6 +260,10 @@ export const useApp = create<AppState>((set, get) => ({
   mode: settings.mode,
   selfTab: 'home',
   clipboardClear: settings.clipboardClear,
+  encryptMeta: settings.encryptMeta,
+  timestampSalt: settings.timestampSalt,
+  autoLockMinutes: settings.autoLockMinutes,
+  locked: false,
   log: loadLog(),
 
   encryptFiles: [],
@@ -280,6 +318,41 @@ export const useApp = create<AppState>((set, get) => ({
     saveSettings({ clipboardClear: value })
     set({ clipboardClear: value })
   },
+
+  setEncryptMeta: (value) => {
+    saveSettings({ encryptMeta: value })
+    set({ encryptMeta: value })
+  },
+
+  setTimestampSalt: (value) => {
+    saveSettings({ timestampSalt: value })
+    set({ timestampSalt: value })
+  },
+
+  setAutoLockMinutes: (value) => {
+    const safe = Math.max(0, Math.min(120, Math.round(value)))
+    saveSettings({ autoLockMinutes: safe })
+    set({ autoLockMinutes: safe })
+  },
+
+  lockNow: () => {
+    // 锁定 = 销毁 Worker 内的主密钥 + 清空一切派生物（一次性视图、已解出明文）
+    try {
+      cryptoClient.destroyKeySync()
+    } catch {
+      /* Worker 未启动时忽略 */
+    }
+    set({
+      locked: true,
+      keyModal: { ...get().keyModal, open: false, view: null, copiedHex: false, copiedBase64: false, downloaded: false },
+      decryptFile: null,
+      decrypting: false,
+      encrypting: false,
+    })
+    get().logEvent('keyDestroy', '已锁定：销毁主密钥并清空明文与一次性密钥视图', 'warn')
+  },
+
+  setLocked: (value) => set({ locked: value }),
 
   t: (key) => translate(get().lang, key),
 

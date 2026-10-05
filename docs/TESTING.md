@@ -8,10 +8,10 @@
 
 ```bash
 pnpm typecheck     # TypeScript 严格模式类型检查
-pnpm test          # Vitest 单元测试（66 项）
+pnpm test          # Vitest 单元测试（88 项）
 pnpm build         # 类型检查 + 生产构建
 pnpm dev           # 另开终端：启动 http://127.0.0.1:5188/
-pnpm test:cli      # 命令行工具测试（55 项，含与网站共用加密实现的往返）
+pnpm test:cli      # 命令行工具测试（58 项，含与网站共用加密实现的往返）
 pnpm test:smoke    # 浏览器端到端冒烟测试（119 项，真实 Edge/Chrome + CDP，含 11 处无障碍审计）
 pnpm test:header   # .XUQIAN 文件头结构验证（真实落盘文件解析）
 pnpm test:interop  # 浏览器 ↔ 命令行 双向互操作（27 项）
@@ -26,7 +26,7 @@ pnpm test:all      # 以上全部（推荐在交付前执行）
 
 ---
 
-## 二、单元测试（`src/crypto/*.test.ts`，66 项）
+## 二、单元测试（`src/**/*.test.ts`，88 项）
 
 ### 2.1 `.XUQIAN` 容器（`container.test.ts`，17 项）
 
@@ -49,7 +49,7 @@ pnpm test:all      # 以上全部（推荐在交付前执行）
 | 15 | 解密后哈希一致 | 还原字节与原始一致，且等于 `meta.h` |
 | 16 | 层顺序影响子密钥 | 同算法不同层号、不同算法的子密钥互不相同 |
 
-### 2.2 `.XUQIANKEY` 密钥文件（`keyfile.test.ts`，5 项）
+### 2.2 `.XUQIANKEY` 密钥文件（`keyfile.test.ts`，6 项）
 
 | # | 用例 | 断言 |
 | --- | --- | --- |
@@ -58,6 +58,7 @@ pnpm test:all      # 以上全部（推荐在交付前执行）
 | 3 | 校验和防护 | 手改 `keyHex` → 报 `KEYFILE_CHECKSUM_MISMATCH` |
 | 4 | 非法文件 | 非 JSON、错误 `format` 均报 `KEYFILE_INVALID` |
 | 5 | 编码长度 | Hex 32 字符、Base64 24 字符 |
+| 6 | **口令轮换** | 旧口令解出 → 新口令重封装；新口令可用且主密钥/指纹不变；旧口令失效 |
 
 ### 2.3 Shamir 分片（`shamir.test.ts`，4 项）
 
@@ -86,6 +87,33 @@ pnpm test:all      # 以上全部（推荐在交付前执行）
 | 12 | 漏写 `nl` | 用 `no` 的 UTF-8 字节数推导，不会把声明当正文 |
 | 13 | 流式剥离 | `bannerSkippingSink` 跨任意分块边界正确；`skip=0` 透传 |
 | 14 | 端到端 | 加密（含声明）→ 解密 → 按 `nl` 剥离，还原原始字节 |
+
+### 2.5 流式引擎（`stream.test.ts`，25 项）
+
+覆盖分块边界、流式加解密、进度回调、异常中断、空文件、大文件与 WebCrypto/纯 JS 双路径一致性。
+
+### 2.6 元数据加密与时间戳盐（`meta.test.ts`，10 项）
+
+| # | 用例 | 断言 |
+| --- | --- | --- |
+| 1 | 开启后文件头不含标识性字段 | 原文件名 / MIME / 备注在明文头部均不可见 |
+| 2 | 解密后字段完整还原 | `n`/`m`/`c`/`os` 全部回到 `meta`，明文逐字节一致 |
+| 3 | 无密钥时的可读视图 | `describeHeader` 只显示"元数据已加密"，不泄露 `originalName` |
+| 4 | 错误密钥 | 元数据解不开 → 统一 `AUTH_FAILED` |
+| 5 | 篡改 `meta.x` | 被 CRC32 或 AAD 拦下 |
+| 6 | 关闭时保持旧行为 | 明文元数据、`0x04` 位为 0、可正常解密 |
+| 7 | 域分离 | MEK ≠ 分块子密钥；`deriveMetaNonce` 为 12 字节 |
+| 8–10 | 时间戳盐 | 开启后置 `0x08` 位且往返一致；关闭时无标志；上下文只改派生结果、可复现 |
+
+### 2.7 口令强度（`passphrase.test.ts`，7 项）
+
+常见弱口令命中 `common`；重复字符 / 连续序列被惩罚；`<12` 位标记 `short`；高熵长口令无警告；
+强度随熵单调增强；空口令为 0 bit；展示分夹在 `2..100`。
+
+### 2.8 全局状态与设置（`store.test.ts`，4 项）
+
+`lockNow()` 进入锁定态并清空一次性密钥视图与已解出明文；`setLocked(false)` 可解锁；
+`autoLockMinutes` 夹取到 `0..120` 并取整；元数据加密开关默认开启且可切换。
 
 ---
 

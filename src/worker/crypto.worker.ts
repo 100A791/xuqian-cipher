@@ -39,6 +39,10 @@ export type WorkerRequest =
       layers: AlgoId[]
       chunkSize?: number
       gzip?: boolean
+      /** 是否加密标识性元数据（原文件名 / MIME / 备注…） */
+      encryptMeta?: boolean
+      /** 时间戳附加盐（域分离，不提升安全性） */
+      timestampSalt?: boolean
       note?: string
       /** 加密声明文本；留空则回退默认声明（声明不可去除） */
       notice?: string
@@ -224,6 +228,8 @@ async function handle(request: WorkerRequest): Promise<WorkerResponse> {
         chunkSize: request.chunkSize,
         gzip: gzipped,
         meta,
+        encryptMeta: request.encryptMeta === true,
+        timestampSalt: request.timestampSalt === true,
       })
       // 容器 → 前面再拼上明文前导区
       const file = concatBytes(buildPreamble(banner.bytes), concatBytes(...result.pieces))

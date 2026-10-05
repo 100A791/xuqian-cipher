@@ -172,6 +172,29 @@ try {
     check('多分块多层解密字节一致', dec.status === 0 && existsSync(restored) && sha(restored) === readFileSync(input).toString('base64'))
   }
 
+  // ---------- 6b. 元数据加密（--encrypt-meta）----------
+  {
+    const dir = freshDir('encmeta')
+    const secretName = '2026个税申报-张三.txt'
+    const input = join(dir, secretName)
+    writeFileSync(input, Buffer.from('confidential payload', 'utf8'))
+    const enc = xuqian(['encrypt', input, '--layers', 'AES-128-GCM', '--encrypt-meta', '--keyfile', keyFile, '--out', dir, '--quiet'])
+    const cipher = join(dir, `${secretName}.XUQIAN`)
+    const raw = readFileSync(cipher)
+    const headText = raw.subarray(0, 1200).toString('latin1')
+    const header = JSON.parse(xuqian(['inspect', cipher, '--json']).stdout)[0].header
+    check(
+      '加密元数据：原文件名不出现在明文文件头',
+      enc.status === 0 && !headText.includes('个税') && !headText.includes('张三'),
+      headText.includes('个税') ? '仍可见原文件名' : '不可见',
+    )
+    check('加密元数据：头部带 enc-meta 标志位', (header.flags & 4) === 4, `flags=${header.flags}`)
+    const decDir = join(dir, 'dec')
+    const dec = xuqian(['decrypt', cipher, '--keyfile', keyFile, '--out', decDir, '--quiet'])
+    const restored = join(decDir, secretName)
+    check('加密元数据：解密后原名还原且字节一致', dec.status === 0 && existsSync(restored) && readFileSync(restored).equals(readFileSync(input)))
+  }
+
   // ---------- 6. gzip 往返（大文本可压缩） ----------
   {
     const dir = freshDir('gzip')

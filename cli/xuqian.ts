@@ -85,7 +85,7 @@ function usage() {
 
 用法:
   xuqian keygen  [-o <密钥文件>] [--password] [--note "说明"]
-  xuqian encrypt <输入...> [--layers <算法列表>] [--chunk-size <大小>] [--gzip] [--out <目录>]
+  xuqian encrypt <输入...> [--layers <算法列表>] [--chunk-size <大小>] [--gzip] [--encrypt-meta] [--timestamp-salt] [--out <目录>]
                           [--note "说明"] [--expires <ISO时间>] [--key <hex> | --keyfile <文件>] [--password]
   xuqian decrypt <输入...> [--key <hex> | --keyfile <文件>] [--password] [--out <目录>] [--check-only]
   xuqian inspect <输入...> [--json]
@@ -121,6 +121,8 @@ const OPTIONS = {
   layers: { type: 'string' },
   'chunk-size': { type: 'string' },
   gzip: { type: 'boolean', default: false },
+  'encrypt-meta': { type: 'boolean', default: false },
+  'timestamp-salt': { type: 'boolean', default: false },
   note: { type: 'string' },
   notice: { type: 'string' },
   expires: { type: 'string' },
@@ -483,6 +485,8 @@ export async function cmdEncrypt(values, inputs) {
             plaintextLength,
             chunkSize,
             gzip: useGzip,
+            encryptMeta: values['encrypt-meta'] === true,
+            timestampSalt: values['timestamp-salt'] === true,
             meta: {
               // 声明信息排最前（meta 键顺序会进 AAD，勿随意调整）
               nl: banner.bytes.length,

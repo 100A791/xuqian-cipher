@@ -19,6 +19,7 @@ import { randomBytes } from '../crypto/keys.ts'
 import { bytesToHex } from '../crypto/encoding.ts'
 import { cryptoClient } from '../worker/client.ts'
 import { Alert, Field, Label } from './ui.tsx'
+import { PassphraseMeter } from './PassphraseMeter.tsx'
 import { EXT_KEYFILE, encryptedFileName } from '../crypto/container.ts'
 
 export function KeyModal() {
@@ -312,6 +313,7 @@ export function KeyModal() {
                           onChange={(event) => setPassword2(event.target.value)}
                         />
                       </Field>
+                      <PassphraseMeter password={password} className="sm:col-span-2" />
                       <p className="text-[10px] xq-muted sm:col-span-2">
                         PBKDF2-SHA256 · 600,000 次迭代 · AES-256-GCM 封装。密码丢失后密钥文件同样无法解开。
                       </p>
