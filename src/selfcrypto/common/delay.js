@@ -38,3 +38,26 @@ export function uniformDelay({ ms } = {}) {
   const wait = typeof ms === 'number' ? ms : uniformDelayMs()
   return new Promise((resolve) => setTimeout(resolve, wait))
 }
+
+/**
+ * 把「从 startedAt 到此刻的**总耗时**」补齐到统一目标（4~5 秒随机）。
+ *
+ * 与 uniformDelay 的区别很关键，不是风格差异：
+ *   uniformDelay         只是**附加**一段延迟。
+ *   padToUniformDuration 保证**总耗时**落入统一窗口。
+ *
+ * 为什么必须后者：失败路径的真实计算量随输入差异极大。"文件被篡改"必须先算完
+ * 整个文件的 HMAC（1 GB 的纯 JS HMAC-SHA256 实测约 25 秒），而如果"密钥错"能在
+ * 第一步就返回，那么"各加 4~5 秒"之后两条路径的总耗时仍相差几十秒 ——
+ * 攻击者测总时长就能区分失败原因，统一延迟形同虚设。
+ *
+ * 前提：调用方已让两条失败路径的**计算量对称**（见 file/decrypt.js 把 MAC 校验提前）。
+ * 本函数只负责把总时长钉进窗口；若真实计算量已超过窗口，则不再叠加等待
+ * （此时两条路径都受同一计算量支配，总耗时自然接近）。
+ *
+ * @param {number} startedAt 流程起始时刻（Date.now()）
+ */
+export async function padToUniformDuration(startedAt) {
+  const remaining = uniformDelayMs() - (Date.now() - startedAt)
+  if (remaining > 0) await new Promise((resolve) => setTimeout(resolve, remaining))
+}

@@ -106,8 +106,10 @@ await runner.test('非内核失败（如未选文件）不走延迟：延迟只�
   resetUniformDelayRange()
 })
 
-await runner.test('KEY_CHECK 在 MAC 之前：错误密钥不会进入解密（顺序正确）', async () => {
-  // 通过内部诊断原因确认：错误密钥的失败原因是 key-check，而不是 mac
+await runner.test('整体 MAC 排在 KEY_CHECK 之前（等时化的前提：两条失败路径都要算完整 MAC）', async () => {
+  // 顺序在本次修复中**反转**了，理由：KEY_CHECK 只需一次 HMAC（微秒级），
+  // 若它排在前面，「密钥错」会立刻返回；而「文件被改」必须先算完整个文件的 MAC ——
+  // 两条路径耗时差几十秒，"各加 4~5 秒延迟"根本掩盖不住。
   const reasons = []
   setInternalDiagnostics((reason) => reasons.push(reason))
   setUniformDelayRange([0, 0])
@@ -116,9 +118,42 @@ await runner.test('KEY_CHECK 在 MAC 之前：错误密钥不会进入解密（�
   } catch {
     /* 预期 */
   }
-  assertEqual(reasons[0], 'key-check-mismatch', `应先撞 KEY_CHECK，实际 ${JSON.stringify(reasons)}`)
+  assertEqual(reasons[0], 'mac-mismatch', `错误密钥现在也应先撞整体 MAC，实际 ${JSON.stringify(reasons)}`)
   resetUniformDelayRange()
   setInternalDiagnostics(() => {})
+})
+
+await runner.test('等时化：两种失败的"真实计算量"对称（延迟归零后耗时相近）', async () => {
+  // 把延迟覆盖成 0 后，剩下的耗时差就是**真实计算量**之差。
+  // 用 1 MiB 把 MAC 计算放大到可观测的量级（纯 JS HMAC 约 40 MB/s）。
+  setUniformDelayRange([0, 0])
+  const bigContent = data(1024 * 1024, 91)
+  const { cipherBytes: bigCipher } = encryptFile(bigContent, [['name', 'big.bin']], { masterKey: key })
+  const tampered = new Uint8Array(bigCipher)
+  tampered[Math.floor(tampered.length / 2)] ^= 0x01
+
+  const t1 = Date.now()
+  try {
+    await decryptFile(bigCipher, data(16, 92))
+  } catch {
+    /* 预期：密钥错 */
+  }
+  const wrongKeyMs = Date.now() - t1
+
+  const t2 = Date.now()
+  try {
+    await decryptFile(tampered, key)
+  } catch {
+    /* 预期：文件被改 */
+  }
+  const tamperMs = Date.now() - t2
+
+  // 关键断言：错误密钥**不能秒回** —— 它同样付出了完整 MAC 的代价
+  assertTrue(wrongKeyMs >= 5, `错误密钥也应付出完整 MAC 的代价，实际 ${wrongKeyMs}ms`)
+  const ratio = Math.max(wrongKeyMs, tamperMs) / Math.max(1, Math.min(wrongKeyMs, tamperMs))
+  assertTrue(ratio < 3, `两条路径耗时不应相差 3 倍以上（${wrongKeyMs}ms vs ${tamperMs}ms）`)
+  console.log(`      等时化实测：错误密钥 ${wrongKeyMs}ms vs 篡改 ${tamperMs}ms`)
+  resetUniformDelayRange()
 })
 
 runner.finish()

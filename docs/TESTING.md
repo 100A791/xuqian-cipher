@@ -15,7 +15,7 @@ pnpm test:cli      # 命令行工具测试（58 项，含与网站共用加密�
 pnpm test:smoke    # 浏览器端到端冒烟测试（119 项，真实 Edge/Chrome + CDP，含 11 处无障碍审计）
 pnpm test:header   # .XUQIAN 文件头结构验证（真实落盘文件解析）
 pnpm test:interop  # 浏览器 ↔ 命令行 双向互操作（27 项）
-pnpm test:selfcrypto  # **自研加密路线**（15 套 227 项断言，零依赖运行器）
+pnpm test:selfcrypto  # **自研加密路线**（15 套 234 项断言，零依赖运行器）
 pnpm bench         # 性能基准（实测数字，写入 docs/PERFORMANCE.md）
 
 pnpm test:all      # 以上全部（推荐在交付前执行）
@@ -117,7 +117,7 @@ pnpm test:all      # 以上全部（推荐在交付前执行）
 
 ---
 
-## 二·补、自研加密路线（`tests/unit/`，15 套 227 项断言）
+## 二·补、自研加密路线（`tests/unit/`，15 套 234 项断言）
 
 自研路线不依赖 Vitest/任何第三方，用自带的零依赖运行器：
 
@@ -127,21 +127,21 @@ pnpm test:selfcrypto     # 等价于 node tests/unit/run-all.js
 
 | 套件 | 项数 | 验什么 |
 | --- | --- | --- |
-| `test_random` | 7 | CSPRNG 封装：长度校验、`randomUint32` **32 位完整性回归**（曾退化成 8 位）、`randomInt` 闭区间与无取模偏置 |
+| `test_random` | 9 | CSPRNG 封装：长度校验、`randomUint32` **32 位完整性回归**（曾退化成 8 位）、**`randomBytes` 超 65536 字节的分片回归**、`randomInt` 闭区间 / 无取模偏置 / **区间上界拒绝** |
 | `test_sha256` | 18 | FIPS 180-4 向量 + 边界（空串 / 分块填充） |
 | `test_hmac` | 14 | RFC 4231 向量 |
 | `test_pbkdf2` | 10 | OpenSSL 交叉生成的 PBKDF2-HMAC-SHA256 向量 |
 | `test_aes` | 12 | FIPS 197 单块（含 S 盒逐项） |
 | `test_ctr` | 14 | NIST SP 800-38A |
 | `test_format` | 13 | 97 字节头部逐字段偏移、KV 帧的 8 类非法输入、长度自洽 |
-| `test_file_crypto` | 18 | 往返 + **与 OpenSSL 双向交叉验证** + 6 类篡改 + 错密钥 + 截断 |
+| `test_file_crypto` | 21 | 往返 + **与 OpenSSL 双向交叉验证（含新旧两种计数器写法）** + 6 类篡改 + 错密钥 + 截断 + **v1 旧格式向后兼容** |
 | `test_watermark` | 29 | LSB 位置序列 / 公开层 / 私有层 / 有形水印两种 mode（角落 + 全图平铺） |
 | `test_ai_detect` | 45 | 元数据四容器（JPEG/PNG/WebP/HEIC-AVIF）+ DCT/FFT/DWT 三种变换的正确性 |
 | `test_storage` | 19 | 密文库"无密钥字段"白名单 + 整库备份往返 + **SPEC 目录结构与禁止事项的机械校验** |
-| `test_large_file` | 7 | 12 MB / 12 块完整性、分块边界（1 块 ±1 字节）、块间计数器不重叠 |
+| `test_large_file` | 8 | 12 MB / 12 块完整性、分块边界（1 块 ±1 字节）、块间计数器不重叠、**完整 nonce 回归** |
 | `test_interrupt` | 8 | 17 处截断横扫 / 追加 / 全零 / 头部篡改 —— 全部统一失败且不返回部分明文 |
-| `test_uniform_delay` | 7 | **实测**失败耗时落在 4~5 秒（错误密钥 4023ms / 篡改 4118ms） |
-| `test_progress` | 6 | 分阶段进度回调：阶段序列、块计数单调、失败路径不上报解密阶段 |
+| `test_uniform_delay` | 8 | **实测**失败耗时落在 4~5 秒；**等时化验证**（两条失败路径的计算量对称，1 MiB 上 31ms vs 24ms） |
+| `test_progress` | 6 | 分阶段进度回调：阶段序列（`mac → keycheck → split → cipher`）、块计数单调、失败路径不上报解密阶段 |
 
 **为什么这些断言可信**：向量不是手抄的，由 `tools/gen_vectors.js` 用 `node:crypto`（OpenSSL）算出；
 FFT 额外与朴素 DFT（O(N²) 独立实现）逐点对照；DWT 用正交归一化的能量守恒验证。

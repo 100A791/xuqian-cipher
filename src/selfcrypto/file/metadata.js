@@ -131,7 +131,10 @@ export function decodeKv(bytes) {
     off += 4
     if (off + valueLen > bytes.length) throw new FormatError('KV_TRUNCATED', '取值越界')
 
-    const valueBytes = bytes.slice(off, off + valueLen)
+    // 显式复制，不用 .slice()：这里的取值会作为 decodeKv 的返回值交给调用方，
+    // 不能是底层文件缓冲区的视图（在 Node Buffer 上 .slice() 返回的正是视图）。
+    const valueBytes = new Uint8Array(valueLen)
+    valueBytes.set(bytes.subarray(off, off + valueLen))
     off += valueLen
 
     let value

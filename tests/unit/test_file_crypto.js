@@ -148,13 +148,34 @@ function unreorderPayload(payload, segments, order) {
   return shares
 }
 
-const refCounter = (bootNonce, chunkIndex) => concat(bootNonce.subarray(0, 8), u64(chunkIndex * (CHUNK_SIZE / 16)))
+/**
+ * 参考实现的计数器构造（**独立于 src/selfcrypto 重写一遍**，这正是交叉验证的意义）。
+ *
+ *   fullNonce = true  → 新文件：整个 16 字节 nonce 作 128 位初值，再累加块偏移
+ *   fullNonce = false → v1 旧文件：只取前 8 字节，后 8 字节直接放块偏移
+ */
+function refCounter(bootNonce, chunkIndex, fullNonce = true) {
+  const counter = fullNonce ? new Uint8Array(bootNonce) : concat(bootNonce.subarray(0, 8), u64(0))
+  return refAddToCounter(counter, BigInt(chunkIndex) * BigInt(CHUNK_SIZE / 16))
+}
 
-function refCtr(key, bootNonce, input) {
+/** 128 位大端加法（参考实现，用 BigInt 独立写一遍）。 */
+function refAddToCounter(counter, value) {
+  const addend = u64(value)
+  let carry = 0n
+  for (let i = 15; i >= 0; i--) {
+    const sum = BigInt(counter[i]) + (i >= 8 ? BigInt(addend[i - 8]) : 0n) + carry
+    counter[i] = Number(sum & 0xffn)
+    carry = sum >> 8n
+  }
+  return counter
+}
+
+function refCtr(key, bootNonce, input, fullNonce = true) {
   const out = new Uint8Array(input.length)
   for (let off = 0, i = 0; off < input.length; off += CHUNK_SIZE, i++) {
     const chunk = input.subarray(off, Math.min(off + CHUNK_SIZE, input.length))
-    const decipher = createDecipheriv('aes-128-ctr', Buffer.from(key), Buffer.from(refCounter(bootNonce, i)))
+    const decipher = createDecipheriv('aes-128-ctr', Buffer.from(key), Buffer.from(refCounter(bootNonce, i, fullNonce)))
     out.set(concat(new Uint8Array(decipher.update(Buffer.from(chunk))), new Uint8Array(decipher.final())), off)
   }
   return out
@@ -189,14 +210,19 @@ function referenceDecrypt(fileBytes, masterKey) {
   const rules = new Uint8Array(bytes.subarray(HEADER_LEN, HEADER_LEN + header.rulesLen))
   const payload = new Uint8Array(bytes.subarray(HEADER_LEN + header.rulesLen, macStart))
   const ciphertext = joinLogical(unreorderPayload(payload, header.segments, header.segmentOrder))
-  const plaintext = refCtr(encKey, header.bootNonce, ciphertext)
+  // 按文件头自述选择计数器构造方式（新文件带 FLAG_FULL_NONCE_COUNTER = 0b100 = 4）
+  const plaintext = refCtr(encKey, header.bootNonce, ciphertext, (header.flags & 4) !== 0)
   const metaLen = new DataView(plaintext.buffer, plaintext.byteOffset).getUint32(0)
   return { content: plaintext.subarray(4 + metaLen), metaLen, rules, header }
 }
 
-/** 参考加密：用 node:crypto 从零造一个文件，交给我们的 decryptFile。 */
-function referenceEncrypt(content, masterKey, metadataName) {
-  const flags = 0
+/**
+ * 参考加密：用 node:crypto 从零造一个文件，交给我们的 decryptFile。
+ * fullNonce=false 造 v1 旧格式（flags=0，只有 64 位 nonce），用于验证**向后兼容**；
+ * fullNonce=true 造新格式（flags=4，完整 128 位 nonce）。
+ */
+function referenceEncrypt(content, masterKey, metadataName, fullNonce = false) {
+  const flags = fullNonce ? 4 : 0
   const timestamp = 0x11223344
   const bootNonce = data(16, 21)
   const salt = data(32, 22)
@@ -212,7 +238,7 @@ function referenceEncrypt(content, masterKey, metadataName) {
   const ciphertext = new Uint8Array(plaintext.length)
   for (let off = 0, i = 0; off < plaintext.length; off += CHUNK_SIZE, i++) {
     const chunk = plaintext.subarray(off, Math.min(off + CHUNK_SIZE, plaintext.length))
-    const cipher = createCipheriv('aes-128-ctr', Buffer.from(encKey), Buffer.from(refCounter(bootNonce, i)))
+    const cipher = createCipheriv('aes-128-ctr', Buffer.from(encKey), Buffer.from(refCounter(bootNonce, i, fullNonce)))
     ciphertext.set(concat(new Uint8Array(cipher.update(Buffer.from(chunk))), new Uint8Array(cipher.final())), off)
   }
 
@@ -309,6 +335,32 @@ await runner.test('交叉验证 C：多分块文件也双向一致（覆盖计�
   assertBytesEqual(reference.content, content, '多分块参考解密')
 })
 
+await runner.test('交叉验证 D：新格式（flags=4，完整 128 位 nonce）—— 参考加密 → 自研解密', async () => {
+  const content = data(CHUNK_SIZE + 321, 23)
+  const reference = referenceEncrypt(content, key, 'v2.bin', true)
+  assertEqual(reference.bytes[9] & 4, 4, '参考实现应置上完整-nonce 标志位')
+  const result = await decryptFile(reference.bytes, key)
+  assertBytesEqual(result.plainBytes, content, '自研实现解开新格式参考文件')
+  assertEqual(result.metadata.get('name'), 'v2.bin', '元数据')
+})
+
+await runner.test('交叉验证 E：自研新格式 —— 参考实现按 flags 自述也能解开', () => {
+  const content = data(3333, 29)
+  const { cipherBytes } = encryptFile(content, [['name', 'v2-cross.bin']], { masterKey: key })
+  assertEqual(cipherBytes[9] & 4, 4, '新文件必须置上完整-nonce 标志位')
+  const reference = referenceDecrypt(cipherBytes, key)
+  assertBytesEqual(reference.content, content, '参考实现按 flags 解出的内容')
+})
+
+await runner.test('向后兼容：v1 旧格式（flags=0，仅 64 位 nonce）仍能解开', async () => {
+  const content = data(2048, 31)
+  const legacy = referenceEncrypt(content, key, 'v1.bin') // fullNonce 默认 false → flags=0
+  assertEqual(legacy.bytes[9] & 4, 0, 'v1 旧格式不应带完整-nonce 标志位')
+  const result = await decryptFile(legacy.bytes, key)
+  assertBytesEqual(result.plainBytes, content, 'v1 旧文件仍可解密')
+  assertEqual(result.metadata.get('name'), 'v1.bin', 'v1 元数据')
+})
+
 // ---------------------------------------------------------------------------
 // 负例：篡改 / 错密钥 / 截断，且都必须走统一失败
 // ---------------------------------------------------------------------------
@@ -340,7 +392,7 @@ for (const [label, mutate] of flips) {
   })
 }
 
-await runner.test('错误密钥 → 统一失败（KEY_CHECK 阶段拦下）', async () => {
+await runner.test('错误密钥 → 统一失败（整体 MAC 阶段拦下）', async () => {
   const { cipherBytes } = encryptFile(data(300, 23), [['name', 'x.bin']], { masterKey: key })
   const wrong = data(16, 77)
   reasons.length = 0
@@ -351,7 +403,9 @@ await runner.test('错误密钥 → 统一失败（KEY_CHECK 阶段拦下）', a
     error = e
   }
   assertEqual(error?.message, '解密失败', '对外文案统一')
-  assertTrue(reasons.includes('key-check-mismatch'), `内部原因应为 key-check-mismatch，实际 ${JSON.stringify(reasons)}`)
+  // 顺序已反转为「先整体 MAC、后 KEY_CHECK」：错误密钥同样要先付出完整 MAC 的代价。
+  // 否则「密钥错」会比「文件被改」快得多（后者必须算完整个文件的 MAC），统一延迟即失效。
+  assertTrue(reasons.includes('mac-mismatch'), `内部原因应为 mac-mismatch，实际 ${JSON.stringify(reasons)}`)
 })
 
 await runner.test('截断文件 → 统一失败（且内部原因是格式问题）', async () => {
@@ -395,11 +449,18 @@ await runner.test('分块计数器不重叠（相邻块的计数器区间无交�
   assertTypeSafeDistinct(c0, c1)
 })
 
+/** 把 16 字节大端计数器读成 128 位 BigInt（新写法下低 8 字节含 nonce 的后半部分）。 */
+function counterToBigInt(bytes) {
+  let v = 0n
+  for (const byte of bytes) v = (v << 8n) | BigInt(byte)
+  return v
+}
+
 function assertTypeSafeDistinct(a, b) {
   assertTrue(bytesToHex(a) !== bytesToHex(b), '不同块的计数器必须不同')
-  // 块 0 的后 8 字节是 0，块 1 的是 65536
-  assertEqual(new DataView(a.buffer).getBigUint64(8), 0n, '块 0 起始计数')
-  assertEqual(new DataView(b.buffer).getBigUint64(8), BigInt(CHUNK_SIZE / 16), '块 1 起始计数')
+  // 按 128 位差值断言：块 1 应恰好比块 0 多一个块的计数器数。
+  // 不能只读低 8 字节 —— 新写法下那里含 nonce 的后半部分。
+  assertEqual(counterToBigInt(b) - counterToBigInt(a), BigInt(CHUNK_SIZE / 16), '块 1 与块 0 的计数器差值')
 }
 
 runner.finish()

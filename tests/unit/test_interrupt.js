@@ -122,10 +122,10 @@ await runner.test('头部声明被篡改（长度/规则块长度）→ 统一�
   assertEqual(failures.length, 0, failures.join('；'))
 })
 
-await runner.test('不同中断原因 → 对外文案完全一致，但内部原因各不相同（可诊断、不外泄）', async () => {
+await runner.test('不同中断原因 → 对外文案完全一致，内部原因仅作诊断（可诊断、不外泄）', async () => {
   reasons.length = 0
   const outcomes = []
-  // ① 截断（结构问题）② 篡改载荷（MAC 问题）③ 错误密钥（KEY_CHECK 问题）
+  // ① 截断（结构问题）② 篡改载荷（MAC 问题）③ 错误密钥（现在同样归入 MAC 问题）
   outcomes.push(await attempt(cipherBytes.slice(0, 500)))
   const tampered = new Uint8Array(cipherBytes)
   tampered[tampered.length - MAC_OFFSET_FROM_END - 1] ^= 0x01
@@ -140,7 +140,12 @@ await runner.test('不同中断原因 → 对外文案完全一致，但内部�
   assertEqual(messages.size, 1, `对外文案必须只有一种，实际：${[...messages].join(' / ')}`)
   assertEqual([...messages][0], '解密失败', '文案内容')
   assertTrue(reasons.length >= 3, `内部原因应有 3 条以上，实际 ${reasons.length}: ${JSON.stringify(reasons)}`)
-  assertTrue(new Set(reasons).size >= 3, `内部原因应各不相同，实际 ${JSON.stringify(reasons)}`)
+  // 注意：**篡改与错误密钥现在都落入 mac-mismatch** —— 这是等时化的预期后果
+  // （MAC 校验排在 KEY_CHECK 之前，两条失败路径都必须先付出完整 MAC 的代价）。
+  // 因此这里只要求「结构问题」与「密码学问题」可区分，不再要求三种互不相同。
+  assertTrue(reasons.includes('mac-mismatch'), `应至少有一条 mac-mismatch，实际 ${JSON.stringify(reasons)}`)
+  assertTrue(reasons.some((r) => r.startsWith('format:')), `应能区分出结构问题，实际 ${JSON.stringify(reasons)}`)
+  assertTrue(new Set(reasons).size >= 2, `内部原因至少应能区分两类，实际 ${JSON.stringify(reasons)}`)
   // 内部原因绝不能出现在对外文案里
   for (const reason of reasons) {
     assertTrue(![...messages][0].includes(reason), `内部原因「${reason}」不得出现在对外文案里`)

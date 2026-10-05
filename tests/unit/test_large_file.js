@@ -19,6 +19,13 @@ const runner = createRunner('大文件分块（完整性 / 边界 / 计数器不
 setUniformDelayRange([0, 0])
 setInternalDiagnostics(() => {})
 
+/** 把 16 字节大端计数器读成 128 位 BigInt（新写法下低 8 字节已不能代表块偏移）。 */
+function counterToBigInt(bytes) {
+  let v = 0n
+  for (const byte of bytes) v = (v << 8n) | BigInt(byte)
+  return v
+}
+
 /** 用可复现的伪随机填充，避免全零数据掩盖"块错位"这类问题。 */
 function patterned(length, seed = 1) {
   const out = new Uint8Array(length)
@@ -88,18 +95,31 @@ await runner.test('块间计数器严格不重叠（覆盖前 24 个块）', () 
   const nonce = patterned(16, 33)
   const seen = new Set()
   const perChunk = CHUNK_SIZE / 16
+  // 计数器 = nonce(完整 128 位) + i × 每块计数器数，低 8 字节含 nonce 的后半部分，
+  // 所以必须按 **128 位整数**比较，不能只读低 8 字节。
+  const base = counterToBigInt(blockCounter(nonce, 0))
   for (let i = 0; i < 24; i++) {
     const counter = blockCounter(nonce, i)
     const hex = bytesToHex(counter)
     assertTrue(!seen.has(hex), `块 ${i} 的计数器与之前重复`)
     seen.add(hex)
-    // 同块内的计数器区间也不能越界到下一块
-    const start = new DataView(counter.buffer, counter.byteOffset).getBigUint64(8)
-    assertEqual(start, BigInt(i) * BigInt(perChunk), `块 ${i} 起始计数`)
+    // 相对块 0 的增量必须恰好是 i 个块
+    assertEqual(counterToBigInt(counter) - base, BigInt(i) * BigInt(perChunk), `块 ${i} 起始计数`)
   }
   // 块内最后一个计数器仍落在本块区间内
   const last = BigInt(23) * BigInt(perChunk) + BigInt(perChunk - 1)
   assertTrue(last < BigInt(24) * BigInt(perChunk), '块内计数器不越界')
+})
+
+await runner.test('完整 nonce：16 字节全部参与计数器（回归：曾只用前 8 字节）', () => {
+  const a = patterned(16, 55)
+  const b = new Uint8Array(a)
+  b[15] ^= 0x01 // 只改 nonce 的**最后一个字节**，前 15 字节不动
+
+  // 新写法：整个 nonce 参与 → 块 0 的计数器必须随之改变
+  assertTrue(bytesToHex(blockCounter(a, 0)) !== bytesToHex(blockCounter(b, 0)), 'nonce 后半必须影响计数器')
+  // v1 兼容分支：后半被丢弃 → 块 0 的计数器完全相同（这正是被修掉的旧行为）
+  assertEqual(bytesToHex(blockCounter(a, 0, false)), bytesToHex(blockCounter(b, 0, false)), 'v1 分支应忽略 nonce 后半')
 })
 
 await runner.test('12 MB 的密文里不应出现明文片段（分块加密没有漏块）', () => {

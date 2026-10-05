@@ -7,6 +7,10 @@
  * 注意：**一律用 `new Uint8Array(x)` 复制，不要用 `x.slice()`**。
  * Node 的 `Buffer.prototype.slice` 其实是 subarray（共享内存的视图），
  * 用它"复制"会变成别名，进而就地改写调用方的缓冲区（AES 那边已经踩过一次）。
+ *
+ * 唯一的例外是**刻意的零拷贝**：需要引用大块数据（如整份载荷）而不复制时，
+ * 明确写 `subarray()` —— 让"这是视图"这个意图落在代码上。
+ * 关键在于：**不要用 `.slice()` 去表达"我想要一份副本"**（在 Buffer 上它不是副本）。
  */
 
 const encoder = new TextEncoder()

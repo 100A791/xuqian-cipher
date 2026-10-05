@@ -5,11 +5,22 @@
  * 因此本文件只做封装（取长度、填缓冲区），不实现任何随机算法本身。
  */
 
+/**
+ * WebCrypto 规定 `getRandomValues` 单次最多填充 65536 字节（64 KiB）。
+ * 超过时抛的是 `QuotaExceededError` —— 名字容易被误读成"磁盘配额不足"，
+ * 且不是本项目其它校验所用的 `RangeError`，排错时会走弯路。
+ */
+const GET_RANDOM_VALUES_MAX = 65536
+
 /** 返回 length 字节的密码学安全随机数。 */
 export function randomBytes(length) {
   if (!Number.isInteger(length) || length < 0) throw new RangeError('randomBytes 长度非法')
   const out = new Uint8Array(length)
-  globalThis.crypto.getRandomValues(out)
+  // 必须分片：单次请求超过 65536 字节会被 WebCrypto 直接拒绝。
+  // 分片与一次填充等价 —— CSPRNG 各段的输出互相独立，拼接不降低随机性。
+  for (let offset = 0; offset < length; offset += GET_RANDOM_VALUES_MAX) {
+    globalThis.crypto.getRandomValues(out.subarray(offset, Math.min(offset + GET_RANDOM_VALUES_MAX, length)))
+  }
   return out
 }
 
@@ -25,6 +36,9 @@ export function randomUint32() {
 export function randomInt(min, max) {
   if (!Number.isInteger(min) || !Number.isInteger(max) || max < min) throw new RangeError('randomInt 区间非法')
   const span = max - min + 1
+  // 区间宽于 32 位随机源时：既无法均匀采样，limit 还会算成 0（下面 value < 0 恒不成立 → 死循环）。
+  // 因此必须显式拒绝，不能靠"调用方不会这么传"。
+  if (span > 0x100000000) throw new RangeError('randomInt 区间宽于 32 位随机源，无法均匀采样')
   // 拒绝采样，避免取模偏置
   const limit = Math.floor(0x100000000 / span) * span
   for (;;) {

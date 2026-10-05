@@ -43,7 +43,14 @@ export function hmacSha256Hex(key, message) {
   return Array.from(hmacSha256(key, message), (b) => b.toString(16).padStart(2, '0')).join('')
 }
 
-/** 常数时间校验 HMAC（SPEC §7：禁止用非常数时间比较 MAC）。 */
+/**
+ * 常数时间校验 HMAC（SPEC §7：禁止用非常数时间比较 MAC）。
+ *
+ * 注意：**解密主路径并不使用本函数** —— 那里用的是 `crypto/compare.js` 的
+ * `timingSafeEqual`（它连长度不等都走完整循环）。本函数目前只被测试使用；
+ * 它"长度不符即提前返回"严格说不是常数时间（长度本身不敏感，故可接受）。
+ * 新增生产代码请优先用 `timingSafeEqual`。
+ */
 export function verifyHmac(key, message, expectedMac) {
   const actual = hmacSha256(key, message)
   if (!(expectedMac instanceof Uint8Array) || expectedMac.length !== actual.length) return false

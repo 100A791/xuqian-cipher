@@ -63,20 +63,23 @@ await runner.test('加密：未传回调时行为不变（返回值与传回调�
   assertTrue(withCb.length > content.length, '密文应大于明文')
 })
 
-await runner.test('解密：阶段序列为 keycheck → mac → split → cipher(逐块)', async () => {
+await runner.test('解密：阶段序列为 mac → keycheck → split → cipher(逐块)', async () => {
   const content = data(CHUNK_SIZE * 2 + 77, 13)
   const { cipherBytes, keyK } = encryptFile(content, meta, { masterKey: key })
   const events = []
   const result = await decryptFile(cipherBytes, keyK, { onProgress: (p) => events.push(p) })
   const phases = [...new Set(events.map((e) => e.phase))]
-  assertEqual(phases.join('>'), 'keycheck>mac>split>cipher', `阶段序列，实际 ${phases.join('>')}`)
+  assertEqual(phases.join('>'), 'mac>keycheck>split>cipher', `阶段序列，实际 ${phases.join('>')}`)
   assertEqual(result.plainBytes.length, content.length, '内容长度')
 
-  // 顺序不可颠倒：密钥必须在 MAC 之前、MAC 必须在解密之前（SPEC §7）
+  // 顺序不可颠倒：MAC 必须在解密之前（SPEC §7）。
+  // 而 MAC **排在 KEY_CHECK 之前**是为了等时化 —— 让「密钥错」与「文件被改」
+  // 都先付出完整 MAC 的代价；否则两者耗时可差几十秒，统一延迟就失效了。
   const firstCipher = events.findIndex((e) => e.phase === 'cipher')
   const firstMac = events.findIndex((e) => e.phase === 'mac')
   const firstKey = events.findIndex((e) => e.phase === 'keycheck')
-  assertTrue(firstKey < firstMac && firstMac < firstCipher, 'KEY_CHECK → MAC → 解密 的顺序')
+  assertTrue(firstMac < firstCipher, 'MAC 必须早于解密')
+  assertTrue(firstMac < firstKey, 'MAC 必须早于 KEY_CHECK（等时化的前提）')
 })
 
 await runner.test('解密：失败时不会上报到 cipher 阶段（不能让人以为已经在解密了）', async () => {

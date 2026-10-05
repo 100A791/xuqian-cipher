@@ -11,7 +11,7 @@
  *   偏移  长度  字段            说明
  *   0     8     MAGIC           SPEC §3 的 8 个非打印字节
  *   8     1     VERSION         当前 0x01
- *   9     1     FLAGS           bit0=内容经压缩；bit1=有口令保护；其余保留必须为 0
+ *   9     1     FLAGS           bit0=内容经压缩；bit1=有口令保护；bit2=CTR 用完整 nonce；其余保留必须为 0
  *   10    2     RESERVED        保留字节：必须为 0（非零即拒绝解析）。与国密 SM4 的 FK 无关
  *   12    4     TIMESTAMP       Unix 秒
  *   16    16    BOOT_NONCE      一次性引导随机数（nonce 唯一性的来源之一）
@@ -52,7 +52,18 @@ export const MAC_OFFSET_FROM_END = MAC_LEN
 /** FLAGS 位定义（其余位必须为 0，否则视为格式错误）。 */
 export const FLAG_COMPRESSED = 0b0000_0001
 export const FLAG_PASSPHRASE = 0b0000_0010
-const FLAG_KNOWN_MASK = FLAG_COMPRESSED | FLAG_PASSPHRASE
+/**
+ * CTR 计数器是否使用**完整 16 字节** BOOT_NONCE 作 128 位初值。
+ *
+ *   置位（新文件）= nonce 的 16 字节全部参与计数器 → 完整 128 位 nonce 空间；
+ *   未置位（v1 旧文件）= 只取 nonce 前 8 字节、后 8 字节放块偏移，
+ *                        块 0 时后 8 字节恒为全零 → 有效 nonce 只有 64 位。
+ *
+ * 这一位是**解密端选择计数器构造方式的唯一依据**，必须随文件走 ——
+ * 不能靠"猜默认值"，否则旧文件会解不开。
+ */
+export const FLAG_FULL_NONCE_COUNTER = 0b0000_0100
+const FLAG_KNOWN_MASK = FLAG_COMPRESSED | FLAG_PASSPHRASE | FLAG_FULL_NONCE_COUNTER
 
 export const SPLIT_MODE_INTERLEAVE_BYTES = 0
 
@@ -82,6 +93,19 @@ export class FormatError extends Error {
 }
 
 const view = (bytes) => new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
+
+/**
+ * 取一段字节的**副本**。
+ *
+ * 不能用 `bytes.slice()`：在 Node `Buffer` 上 `Buffer.prototype.slice` 其实是 subarray，
+ * 返回共享内存的视图而不是副本 —— 一旦被就地改写就会连带改掉整个文件缓冲区
+ * （`aes.js` 早期已经踩过一次这个坑）。
+ */
+function copyRange(bytes, start, length) {
+  const out = new Uint8Array(length)
+  out.set(bytes.subarray(start, start + length))
+  return out
+}
 
 /** 构造一个"默认参数"的头部对象（加密端从这里出发，再覆盖需要变的字段）。 */
 export function defaultHeader(overrides = {}) {
@@ -171,14 +195,14 @@ export function parseHeader(bytes) {
     version: bytes[OFFSETS.VERSION],
     flags: bytes[OFFSETS.FLAGS],
     timestamp: dv.getUint32(OFFSETS.TIMESTAMP),
-    bootNonce: bytes.slice(OFFSETS.BOOT_NONCE, OFFSETS.BOOT_NONCE + BOOT_NONCE_LEN),
+    bootNonce: copyRange(bytes, OFFSETS.BOOT_NONCE, BOOT_NONCE_LEN),
     rulesLen: dv.getUint32(OFFSETS.RULES_LEN),
     chunkSize: dv.getUint32(OFFSETS.CHUNK_SIZE),
     segments: bytes[OFFSETS.SEGMENTS],
     splitMode: bytes[OFFSETS.SPLIT_MODE],
-    segmentOrder: bytes.slice(OFFSETS.SEGMENT_ORDER, OFFSETS.SEGMENT_ORDER + 3),
-    salt: bytes.slice(OFFSETS.SALT, OFFSETS.SALT + SALT_LEN),
-    keyCheck: bytes.slice(OFFSETS.KEY_CHECK, OFFSETS.KEY_CHECK + KEY_CHECK_LEN),
+    segmentOrder: copyRange(bytes, OFFSETS.SEGMENT_ORDER, 3),
+    salt: copyRange(bytes, OFFSETS.SALT, SALT_LEN),
+    keyCheck: copyRange(bytes, OFFSETS.KEY_CHECK, KEY_CHECK_LEN),
     payloadLen: dv.getUint32(OFFSETS.PAYLOAD_LEN),
   })
   return assertHeaderValid(header)
@@ -224,11 +248,16 @@ export function splitFile(bytes) {
   return {
     header,
     layout,
-    rules: bytes.slice(layout.rulesStart, layout.payloadStart),
-    payload: bytes.slice(layout.payloadStart, layout.macStart),
-    mac: bytes.slice(layout.macStart, layout.macStart + MAC_LEN),
-    /** MAC 覆盖的字节 = 除末尾 MAC 自身以外的全部内容 */
-    macCovered: bytes.slice(0, layout.macStart),
+    // 以下四段**有意用 subarray（视图）而非复制**：载荷可能上 GB，
+    // 复制一份会让内存占用直接翻倍。它们在下游只被读取（MAC 计算、解密、判等），
+    // 没有任何一处就地改写 —— 但正因为是视图，调用方若要修改必须先自行复制。
+    // 写成 subarray 而不是 .slice()，是为了把"这是视图"这个意图明确落在代码上
+    // （在 Buffer 上二者行为完全一样，光看 .slice() 分不出作者想要副本还是视图）。
+    rules: bytes.subarray(layout.rulesStart, layout.payloadStart),
+    payload: bytes.subarray(layout.payloadStart, layout.macStart),
+    mac: bytes.subarray(layout.macStart, layout.macStart + MAC_LEN),
+    /** MAC 覆盖的字节 = 除末尾 MAC 自身以外的全部内容（视图，同上） */
+    macCovered: bytes.subarray(0, layout.macStart),
   }
 }
 

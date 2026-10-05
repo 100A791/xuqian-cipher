@@ -73,4 +73,28 @@ await runner.test('randomInt：无取模偏置 —— 小跨度下各值频次�
   assertTrue(maxDeviation < expected * 0.2, `频次偏差过大：${maxDeviation}（期望约 ${expected}）`)
 })
 
+await runner.test('randomBytes：超过 65536 字节也能取（回归：WebCrypto 单次上限）', () => {
+  // WebCrypto 规定 getRandomValues 单次最多 65536 字节，超限会抛 QuotaExceededError
+  // （名字还容易被误读成"磁盘配额不足"）。必须分片填充，否则任何 >64 KiB 的请求直接崩。
+  const a = randomBytes(65537)
+  const b = randomBytes(65537)
+  assertEqual(a.length, 65537, '65537 字节长度')
+  assertTrue(new Set(a).size > 100, '取值应散布（不是常量或局部填充）')
+  assertTrue(a.some((v, i) => v !== b[i]), '两次大块请求不应完全相同')
+  // 覆盖更多分片：1 MiB 也要可用
+  assertEqual(randomBytes(1024 * 1024).length, 1024 * 1024, '1 MiB 长度')
+})
+
+await runner.test('randomInt：区间宽于 32 位随机源时被拒绝（回归：limit=0 会死循环）', () => {
+  // span > 2^32 时 Math.floor(2^32 / span) === 0 → limit=0 → `value < 0` 永不成立 → 死循环。
+  // 必须显式拒绝，不能依赖"调用方不会这么传"。
+  let threw = false
+  try {
+    randomInt(0, 0x100000000)
+  } catch {
+    threw = true
+  }
+  assertTrue(threw, 'span 超过 2^32 必须抛错')
+})
+
 runner.finish()
