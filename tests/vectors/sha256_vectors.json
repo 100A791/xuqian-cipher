@@ -1,0 +1,135 @@
+{
+  "algorithm": "sha256",
+  "specSection": "SPEC 第 5 节阶段一 —— sha256.js，跑 FIPS 180-4 测试向量",
+  "generatedBy": "node:crypto (OpenSSL 独立实现)，见 tools/gen_vectors.js",
+  "note": "期望值由 OpenSSL 算出，与被测的自研实现相互独立；不要手改此文件，改请重跑生成器。",
+  "cases": [
+    {
+      "name": "空串",
+      "input": {
+        "utf8": ""
+      },
+      "expect": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "abc",
+      "input": {
+        "utf8": "abc"
+      },
+      "expect": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+    },
+    {
+      "name": "FIPS 常见 56 字节",
+      "input": {
+        "utf8": "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq"
+      },
+      "expect": "248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1"
+    },
+    {
+      "name": "单个字节 0x00",
+      "input": {
+        "bytes": [
+          0
+        ]
+      },
+      "expect": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"
+    },
+    {
+      "name": "单字节边界 len=54",
+      "input": {
+        "repeat": {
+          "byte": 97,
+          "times": 54
+        }
+      },
+      "expect": "a3f01b6939256127582ac8ae9fb47a382a244680806a3f613a118851c1ca1d47"
+    },
+    {
+      "name": "填充边界 len=55",
+      "input": {
+        "repeat": {
+          "byte": 97,
+          "times": 55
+        }
+      },
+      "expect": "9f4390f8d30c2dd92ec9f095b65e2b9ae9b0a925a5258e241c9f1e910f734318"
+    },
+    {
+      "name": "进入新块 len=56",
+      "input": {
+        "repeat": {
+          "byte": 97,
+          "times": 56
+        }
+      },
+      "expect": "b35439a4ac6f0948b6d6f9e3c6af0f5f590ce20f1bde7090ef7970686ec6738a"
+    },
+    {
+      "name": "填充边界 len=63",
+      "input": {
+        "repeat": {
+          "byte": 97,
+          "times": 63
+        }
+      },
+      "expect": "7d3e74a05d7db15bce4ad9ec0658ea98e3f06eeecf16b4c6fff2da457ddc2f34"
+    },
+    {
+      "name": "整块 len=64",
+      "input": {
+        "repeat": {
+          "byte": 97,
+          "times": 64
+        }
+      },
+      "expect": "ffe054fe7ae0cb6dc65c3af9b61d5209f439851db43d0ba5997337df154668eb"
+    },
+    {
+      "name": "整块+1 len=65",
+      "input": {
+        "repeat": {
+          "byte": 97,
+          "times": 65
+        }
+      },
+      "expect": "635361c48bb9eab14198e76ea8ab7f1a41685d6ad62aa9146d301d4f17eb0ae0"
+    },
+    {
+      "name": "双块边界 len=119",
+      "input": {
+        "repeat": {
+          "byte": 97,
+          "times": 119
+        }
+      },
+      "expect": "31eba51c313a5c08226adf18d4a359cfdfd8d2e816b13f4af952f7ea6584dcfb"
+    },
+    {
+      "name": "双块 len=120",
+      "input": {
+        "repeat": {
+          "byte": 97,
+          "times": 120
+        }
+      },
+      "expect": "2f3d335432c70b580af0e8e1b3674a7c020d683aa5f73aaaedfdc55af904c21c"
+    },
+    {
+      "name": "一百万个 a",
+      "input": {
+        "repeat": {
+          "byte": 97,
+          "times": 1000000
+        }
+      },
+      "expect": "cdc76e5c9914fb9281a1c7e284d73e67f1809a48a497200e046d39ccc7112cd0"
+    },
+    {
+      "name": "多字节 UTF-8（中文）",
+      "input": {
+        "utf8": "许七安密匣 · XUQIAN 加密站"
+      },
+      "expect": "07dd674710ac76825ea15a21b235898c491e346c7b2b9645a7c1c45939faf48a"
+    }
+  ]
+}

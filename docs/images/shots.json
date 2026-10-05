@@ -1,0 +1,150 @@
+{
+  "base": "http://127.0.0.1:5188/",
+  "ts": "2026-09-26T17:55:27.077Z",
+  "shots": [
+    {
+      "name": "01-home-encrypt-empty",
+      "note": "首页与加密分区（空态）",
+      "file": "docs/images/01-home-encrypt-empty.png",
+      "bytes": 133395
+    },
+    {
+      "name": "02-encrypt-configured",
+      "note": "加密分区：已选文件、三层算法、gzip、备注与到期提醒",
+      "file": "docs/images/02-encrypt-configured.png",
+      "bytes": 139056
+    },
+    {
+      "name": "03a-encrypt-queued-bigfile",
+      "note": "加密分区：加入一个大文件后队列状态",
+      "file": "docs/images/03a-encrypt-queued-bigfile.png",
+      "bytes": 143017
+    },
+    {
+      "name": "03-encrypt-progress",
+      "note": "加密进行中：进度条与按钮状态（大文件分块加密）",
+      "file": "docs/images/03-encrypt-progress.png",
+      "bytes": 140253
+    },
+    {
+      "name": "04-key-modal",
+      "note": "密钥一次性展示弹窗：红色警告、Hex/Base64/指纹、二维码、分片",
+      "file": "docs/images/04-key-modal.png",
+      "bytes": 127073
+    },
+    {
+      "name": "05-key-confirm",
+      "note": "未复制/未下载就关闭时的二次确认",
+      "file": "docs/images/05-key-confirm.png",
+      "bytes": 117972
+    },
+    {
+      "name": "06-key-password-shamir",
+      "note": "密钥弹窗：密码保护密钥文件 + Shamir 分片已生成",
+      "file": "docs/images/06-key-password-shamir.png",
+      "bytes": 125799
+    },
+    {
+      "name": "07-encrypt-results",
+      "note": "加密完成：每个文件的下载按钮与 ZIP 打包",
+      "file": "docs/images/07-encrypt-results.png",
+      "bytes": 137229
+    },
+    {
+      "name": "08-decrypt-loaded",
+      "note": "解密分区：已载入 .XUQIAN、显示明文文件头、输入密钥",
+      "file": "docs/images/08-decrypt-loaded.png",
+      "bytes": 155207
+    },
+    {
+      "name": "08a-selfcheck-match",
+      "note": "密钥自检：只读文件头与首块即可判定密钥是否匹配",
+      "file": "docs/images/08a-selfcheck-match.png",
+      "bytes": 161689
+    },
+    {
+      "name": "08b-selfcheck-mismatch",
+      "note": "密钥自检：错误密钥给出统一结论并显示当前密钥指纹",
+      "file": "docs/images/08b-selfcheck-mismatch.png",
+      "bytes": 160732
+    },
+    {
+      "name": "09-decrypt-done",
+      "note": "解密完成：SHA-256 校验一致、还原文件下载",
+      "file": "docs/images/09-decrypt-done.png",
+      "bytes": 163613
+    },
+    {
+      "name": "10-decrypt-failed",
+      "note": "错误密钥：统一提示「密钥错误或文件损坏」，不区分具体原因",
+      "file": "docs/images/10-decrypt-failed.png",
+      "bytes": 159590
+    },
+    {
+      "name": "11-decrypt-keyfile-mode",
+      "note": "解密分区：切换到「上传 .XUQIANKEY 文件」模式",
+      "file": "docs/images/11-decrypt-keyfile-mode.png",
+      "bytes": 157085
+    },
+    {
+      "name": "12-text-key-modal",
+      "note": "文本分区：文本加密同样强制弹出密钥弹窗",
+      "file": "docs/images/12-text-key-modal.png",
+      "bytes": 141653
+    },
+    {
+      "name": "13-text-panel",
+      "note": "文本分区：明文 → 密文串（XUQIAN1: 前缀），可复制/存文件",
+      "file": "docs/images/13-text-panel.png",
+      "bytes": 166185
+    },
+    {
+      "name": "14-tools-password",
+      "note": "工具分区：随机密码生成器（CSPRNG）",
+      "file": "docs/images/14-tools-password.png",
+      "bytes": 114442
+    },
+    {
+      "name": "15-tools-hash",
+      "note": "工具分区：SHA-256 / SHA-512 哈希校验",
+      "file": "docs/images/15-tools-hash.png",
+      "bytes": 132750
+    },
+    {
+      "name": "16-tools-inspect-shamir",
+      "note": "工具分区（下半部分）：查看 .XUQIAN 文件头、Shamir 分片恢复、设置与本地日志",
+      "file": "docs/images/16-tools-inspect-shamir.png",
+      "bytes": 97574
+    },
+    {
+      "name": "17-light-theme",
+      "note": "亮色主题下的加密分区",
+      "file": "docs/images/17-light-theme.png",
+      "bytes": 144799
+    },
+    {
+      "name": "18-english",
+      "note": "英文界面（工具分区可切换语言）",
+      "file": "docs/images/18-english.png",
+      "bytes": 140950
+    },
+    {
+      "name": "19-mobile-encrypt",
+      "note": "移动端（390×844）：加密分区布局",
+      "file": "docs/images/19-mobile-encrypt.png",
+      "bytes": 228809
+    },
+    {
+      "name": "20-mobile-decrypt",
+      "note": "移动端：解密分区布局",
+      "file": "docs/images/20-mobile-decrypt.png",
+      "bytes": 226346
+    },
+    {
+      "name": "21-key-qr",
+      "note": "密钥二维码特写（等同密钥，切勿外传）",
+      "file": "docs/images/21-key-qr.png",
+      "bytes": 16550
+    }
+  ]
+}

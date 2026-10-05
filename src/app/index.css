@@ -1,0 +1,221 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+  XUQIAN 加密站 —— 暗色科技风 + 古风印章元素
+  主题通过 html[data-theme] 切换，所有颜色走 CSS 变量，移动端优先。
+*/
+
+:root {
+  color-scheme: dark;
+  --bg: #05070d;
+  --bg-soft: #0a0e17;
+  --panel: rgba(15, 20, 32, 0.92);
+  --panel-border: rgba(120, 145, 190, 0.18);
+  --text: #e8edf7;
+  --text-dim: #9aa8c2;
+  --accent: #d8b26a;
+  --seal: #c8342c;
+  --seal-bright: #e8453a;
+  --jade: #2fbf9f;
+  --grid-line: rgba(216, 178, 106, 0.08);
+}
+
+html[data-theme='light'] {
+  color-scheme: light;
+  --bg: #f4f1ea;
+  --bg-soft: #fbf9f5;
+  --panel: rgba(255, 255, 255, 0.94);
+  --panel-border: rgba(60, 70, 90, 0.16);
+  --text: #1d2433;
+  --text-dim: #5c6a83;
+  --accent: #8a6b23;
+  --seal: #b32a22;
+  --seal-bright: #cf3a30;
+  --jade: #12796a;
+  --grid-line: rgba(138, 107, 35, 0.1);
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(1200px 600px at 12% -10%, rgba(200, 52, 44, 0.14), transparent 60%),
+    radial-gradient(900px 520px at 92% 4%, rgba(216, 178, 106, 0.1), transparent 65%),
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: auto, auto, 44px 44px, 44px 44px;
+  color: var(--text);
+  font-family: system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+@layer components {
+  .xq-panel {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 14px;
+    backdrop-filter: blur(10px);
+  }
+
+  .xq-card {
+    background: color-mix(in srgb, var(--panel) 82%, transparent);
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+  }
+
+  .xq-btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition;
+    border: 1px solid var(--panel-border);
+    background: color-mix(in srgb, var(--panel) 70%, transparent);
+    color: var(--text);
+  }
+
+  .xq-btn:hover:not(:disabled) {
+    border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+    color: var(--accent);
+  }
+
+  .xq-btn:disabled {
+    @apply cursor-not-allowed opacity-45;
+  }
+
+  .xq-btn-primary {
+    background: linear-gradient(180deg, var(--seal-bright), var(--seal));
+    border-color: transparent;
+    color: #fff;
+    box-shadow: 0 10px 26px -14px var(--seal);
+  }
+
+  .xq-btn-primary:hover:not(:disabled) {
+    color: #fff;
+    filter: brightness(1.08);
+  }
+
+  .xq-btn-ghost {
+    background: transparent;
+  }
+
+  .xq-input,
+  .xq-select,
+  .xq-textarea {
+    @apply w-full rounded-lg px-3 py-2 text-sm outline-none transition;
+    background: color-mix(in srgb, var(--bg) 65%, transparent);
+    border: 1px solid var(--panel-border);
+    color: var(--text);
+  }
+
+  .xq-input:focus,
+  .xq-select:focus,
+  .xq-textarea:focus {
+    border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+  }
+
+  .xq-label {
+    @apply mb-1 block text-xs font-medium tracking-wide;
+    color: var(--text-dim);
+  }
+
+  .xq-mono {
+    font-family: ui-monospace, 'SFMono-Regular', 'Cascadia Mono', Consolas, monospace;
+  }
+
+  .xq-muted {
+    color: var(--text-dim);
+  }
+
+  .xq-chip {
+    @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium;
+    border: 1px solid var(--panel-border);
+    color: var(--text-dim);
+  }
+
+  .xq-tab {
+    @apply relative rounded-lg px-3 py-2 text-sm font-medium transition;
+    color: var(--text-dim);
+  }
+
+  .xq-tab[data-active='true'] {
+    color: var(--text);
+    background: color-mix(in srgb, var(--seal) 16%, transparent);
+    box-shadow: inset 0 -2px 0 var(--seal);
+  }
+
+  .xq-seal {
+    /* 古风印章：方框 + 篆刻感字距 */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid var(--seal);
+    border-radius: 6px;
+    color: var(--seal-bright);
+    font-family: 'Noto Serif SC', 'Songti SC', STSong, SimSun, serif;
+    letter-spacing: 0.16em;
+    text-indent: 0.16em;
+    box-shadow: inset 0 0 12px -6px var(--seal);
+  }
+
+  .xq-danger-panel {
+    border: 1px solid color-mix(in srgb, var(--seal) 65%, transparent);
+    background: color-mix(in srgb, var(--seal) 14%, transparent);
+    border-radius: 12px;
+  }
+
+  .xq-progress {
+    @apply h-2 w-full overflow-hidden rounded-full;
+    background: color-mix(in srgb, var(--text) 12%, transparent);
+  }
+
+  .xq-progress > span {
+    @apply block h-full rounded-full transition-[width] duration-200;
+    background: linear-gradient(90deg, var(--jade), var(--accent));
+  }
+
+  .xq-table {
+    @apply w-full text-left text-xs;
+  }
+
+  .xq-table th {
+    @apply py-1 pr-3 font-medium;
+    color: var(--text-dim);
+  }
+
+  .xq-table td {
+    @apply py-1 pr-3 align-top break-all;
+  }
+}
+
+/* 滚动条与选择样式 */
+::selection {
+  background: color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+*:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 70%, transparent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* 自动化测试（scripts/smoke.mjs 等）用：关闭所有动画/过渡，避免布局在断言时抖动 */
+html[data-test] *,
+html[data-test] *::before,
+html[data-test] *::after {
+  animation: none !important;
+  transition: none !important;
+}

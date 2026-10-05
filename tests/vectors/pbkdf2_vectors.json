@@ -1,0 +1,116 @@
+{
+  "algorithm": "pbkdf2-hmac-sha256",
+  "specSection": "SPEC 第 5 节阶段一 —— pbkdf2.js",
+  "generatedBy": "node:crypto pbkdf2Sync(..., \"sha256\") (OpenSSL 独立实现)，见 tools/gen_vectors.js",
+  "specConflict": "SPEC §5 写的是「跑 RFC 6070 测试向量」，但 RFC 6070 是 PBKDF2-HMAC-SHA1 的向量集；使用它需要实现 SHA-1，而 SHA-1 不在 SPEC §7 允许自研的算法清单内。故此处改用 PBKDF2-HMAC-SHA256 向量（含 RFC 7914 §11 的两个公开用例）。",
+  "cases": [
+    {
+      "name": "passwd/salt/c=1/dkLen=64（RFC 7914 §11 用例）",
+      "password": {
+        "utf8": "passwd"
+      },
+      "salt": {
+        "utf8": "salt"
+      },
+      "iterations": 1,
+      "dkLen": 64,
+      "expect": "55ac046e56e3089fec1691c22544b605f94185216dde0465e68b9d57c20dacbc49ca9cccf179b645991664b39d77ef317c71b845b1e30bd509112041d3a19783"
+    },
+    {
+      "name": "Password/NaCl/c=80000/dkLen=64（RFC 7914 §11 用例）",
+      "password": {
+        "utf8": "Password"
+      },
+      "salt": {
+        "utf8": "NaCl"
+      },
+      "iterations": 80000,
+      "dkLen": 64,
+      "expect": "4ddcd8f60b98be21830cee5ef22701f9641a4418d04c0414aeff08876b34ab56a1d425a1225833549adb841b51c9b3176a272bdebba1d078478f62b397f33c8d"
+    },
+    {
+      "name": "passwd/salt/c=4096/dkLen=32",
+      "password": {
+        "utf8": "passwd"
+      },
+      "salt": {
+        "utf8": "salt"
+      },
+      "iterations": 4096,
+      "dkLen": 32,
+      "expect": "21943fd5b7a10905c38fad60157ff498e1e81df1e03254325682a74dca3b2be8"
+    },
+    {
+      "name": "空口令 / 空盐 / c=1",
+      "password": {
+        "bytes": []
+      },
+      "salt": {
+        "bytes": []
+      },
+      "iterations": 1,
+      "dkLen": 32,
+      "expect": "f7ce0b653d2d72a4108cf5abe912ffdd777616dbbb27a70e8204f3ae2d0f6fad"
+    },
+    {
+      "name": "8×0x00 口令 / 4×0x00 盐 / c=1",
+      "password": {
+        "repeat": {
+          "byte": 0,
+          "times": 8
+        }
+      },
+      "salt": {
+        "repeat": {
+          "byte": 0,
+          "times": 4
+        }
+      },
+      "iterations": 1,
+      "dkLen": 32,
+      "expect": "a4a11ce5fbe8f96bf3028035286c2c9274cd4259cbc224e37a73d971923903d3"
+    },
+    {
+      "name": "多块输出 dkLen=100（4 块，末块截断）",
+      "password": {
+        "utf8": "multi-block"
+      },
+      "salt": {
+        "utf8": "salty"
+      },
+      "iterations": 2,
+      "dkLen": 100,
+      "expect": "f36cca4de6ee4f987b42453f340957734b0b8df01d51e50fb6003b2f4d7a68cc01c59ff1e4a23da11a4515906247119b065f2acdc5c24f97409742c40f65e2d6f4fae2431278d582a166896f4d198f5837ed8de35aa24170d1671981e733d721d98a6e58"
+    },
+    {
+      "name": "极端短输出 dkLen=1",
+      "password": {
+        "utf8": "short"
+      },
+      "salt": {
+        "utf8": "s"
+      },
+      "iterations": 3,
+      "dkLen": 1,
+      "expect": "42"
+    },
+    {
+      "name": "长口令（>块长的密钥路径）",
+      "password": {
+        "repeat": {
+          "byte": 97,
+          "times": 100
+        }
+      },
+      "salt": {
+        "repeat": {
+          "byte": 98,
+          "times": 40
+        }
+      },
+      "iterations": 2,
+      "dkLen": 48,
+      "expect": "93912523034e520c55cd11d3a11821f52bd73a0056bbc9354a8aeb6a25842c70f501b4d5b25ee5b57ed773272e713462"
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+# pnpm 11 起，依赖的构建脚本默认被阻止（ERR_PNPM_IGNORED_BUILDS）。
+# esbuild 必须执行 postinstall 才能装上它自己的可执行文件，vite 依赖它，
+# 所以这里显式允许。加新依赖若报同类错误，在这里补一行即可。
+allowBuilds:
+  esbuild: true

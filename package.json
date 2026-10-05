@@ -1,0 +1,66 @@
+{
+  "name": "xuqian-cipher",
+  "private": true,
+  "version": "2.2.0",
+  "description": "XUQIAN 加密站 / 许七安密匣 — 纯前端本地文件加密工具",
+  "type": "module",
+  "bin": {
+    "xuqian": "cli/xuqian.mjs"
+  },
+  "exports": {
+    ".": "./src/crypto/container.ts",
+    "./stream": "./src/crypto/stream.ts",
+    "./keyfile": "./src/crypto/keyfile.ts",
+    "./keys": "./src/crypto/keys.ts",
+    "./aead": "./src/crypto/aead.ts",
+    "./shamir": "./src/crypto/shamir.ts",
+    "./encoding": "./src/crypto/encoding.ts"
+  },
+  "scripts": {
+    "docs:sync": "node scripts/sync-docs.mjs",
+    "dev": "npm run docs:sync && vite --port 5188 --strictPort --host 127.0.0.1",
+    "dev:https": "npm run docs:sync && node scripts/gen-cert.mjs && vite --port 5443 --strictPort --host 127.0.0.1 --https",
+    "build": "npm run docs:sync && tsc -p tsconfig.app.json --noEmit && vite build",
+    "preview": "vite preview --port 5189 --strictPort --host 127.0.0.1",
+    "typecheck": "tsc -p tsconfig.app.json --noEmit",
+    "xuqian": "node cli/xuqian.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:cli": "node scripts/cli-test.mjs",
+    "test:selfcrypto": "node tests/unit/run-all.js",
+    "gen:vectors": "node tools/gen_vectors.js",
+    "test:smoke": "node scripts/smoke.mjs",
+    "test:header": "node scripts/verify-header.mjs",
+    "test:interop": "node scripts/interop-test.mjs",
+    "docs:shots": "node scripts/capture-guide.mjs",
+    "test:all": "npm run docs:sync && npm run typecheck && npm run test && npm run build && npm run test:cli && npm run test:smoke && npm run test:header && npm run test:interop",
+    "bench": "node scripts/benchmark.mjs"
+  },
+  "dependencies": {
+    "@noble/ciphers": "2.4.0",
+    "@noble/hashes": "2.4.0",
+    "file-saver": "2.0.5",
+    "pako": "3.0.2",
+    "qrcode": "1.5.4",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "zustand": "5.0.15"
+  },
+  "devDependencies": {
+    "@types/file-saver": "2.0.7",
+    "@types/node": "24.10.1",
+    "@types/qrcode": "1.5.6",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "5.1.1",
+    "autoprefixer": "10.4.21",
+    "postcss": "8.5.6",
+    "tailwindcss": "3.4.17",
+    "typescript": "5.7.3",
+    "vite": "7.3.1",
+    "vitest": "3.2.4"
+  },
+  "engines": {
+    "node": ">=20.19"
+  }
+}
