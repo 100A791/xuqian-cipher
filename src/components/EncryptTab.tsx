@@ -130,7 +130,10 @@ export function EncryptTab() {
 
       const elapsed = performance.now() - started
       setLastRun({ count: list.length, ms: elapsed, bytes: written })
-      store.logEvent('encrypt', `加密 ${list.length} 个文件，输出 ${formatBytes(written)}，耗时 ${formatDuration(elapsed)}`)
+      store.logEvent(
+        'encrypt',
+        `加密 ${list.length} 个文件，输出 ${formatBytes(written)}，耗时 ${formatDuration(elapsed)}`,
+      )
 
       // 3) 必须先弹出密钥展示弹窗（不可跳过）
       const view = await cryptoClient.viewKey()
@@ -184,7 +187,12 @@ export function EncryptTab() {
                   <span className="xq-muted">
                     {t('drop.selected')}：{files.length} · {formatBytes(totalSize)}
                   </span>
-                  <button type="button" className="xq-btn xq-btn-ghost text-[11px]" disabled={encrypting} onClick={() => store.setEncryptFiles([])}>
+                  <button
+                    type="button"
+                    className="xq-btn xq-btn-ghost text-[11px]"
+                    disabled={encrypting}
+                    onClick={() => store.setEncryptFiles([])}
+                  >
                     {t('common.clear')}
                   </button>
                 </div>
@@ -306,7 +314,12 @@ export function EncryptTab() {
             <p className="text-[11px] xq-muted">{t('encrypt.chunkHint')}</p>
 
             <label className="flex items-start gap-2 text-xs">
-              <input type="checkbox" checked={gzip} disabled={encrypting} onChange={(event) => store.setGzip(event.target.checked)} />
+              <input
+                type="checkbox"
+                checked={gzip}
+                disabled={encrypting}
+                onChange={(event) => store.setGzip(event.target.checked)}
+              />
               <span>
                 {t('encrypt.gzip')}
                 <span className="block text-[11px] xq-muted">{t('encrypt.gzip.hint')}</span>
@@ -382,9 +395,7 @@ export function EncryptTab() {
             {lastRun ? (
               <Alert tone="ok" title={t('encrypt.done')}>
                 {lastRun.count} · {formatBytes(lastRun.bytes)} · {formatDuration(lastRun.ms)}
-                <div className="mt-1 text-[11px] xq-muted">
-                  {t('key.tipAfter')}
-                </div>
+                <div className="mt-1 text-[11px] xq-muted">{t('key.tipAfter')}</div>
               </Alert>
             ) : null}
           </div>
@@ -395,8 +406,7 @@ export function EncryptTab() {
         <Panel>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="text-xs xq-muted">
-              {t('encrypt.done')}：
-              {files.filter((item) => item.status === 'done').length} / {files.length}
+              {t('encrypt.done')}：{files.filter((item) => item.status === 'done').length} / {files.length}
             </div>
             <div className="flex flex-wrap gap-2">
               {files

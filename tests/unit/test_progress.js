@@ -92,14 +92,20 @@ await runner.test('解密：失败时不会上报到 cipher 阶段（不能让�
     threw = true
   }
   assertEqual(threw, true, '错误密钥应失败')
-  assertTrue(!events.some((e) => e.phase === 'cipher'), `失败路径不该进解密阶段，实际 ${events.map((e) => e.phase).join(',')}`)
+  assertTrue(
+    !events.some((e) => e.phase === 'cipher'),
+    `失败路径不该进解密阶段，实际 ${events.map((e) => e.phase).join(',')}`,
+  )
 })
 
 await runner.test('加密：进度事件数量与文件大小成比例（大文件不会只报一次）', () => {
   const small = []
   const big = []
   encryptFile(data(CHUNK_SIZE, 21), meta, { masterKey: key, onProgress: (p) => p.phase === 'cipher' && small.push(p) })
-  encryptFile(data(CHUNK_SIZE * 6, 23), meta, { masterKey: key, onProgress: (p) => p.phase === 'cipher' && big.push(p) })
+  encryptFile(data(CHUNK_SIZE * 6, 23), meta, {
+    masterKey: key,
+    onProgress: (p) => p.phase === 'cipher' && big.push(p),
+  })
   assertEqual(small.length, expectedChunks(CHUNK_SIZE), '1 个分块的内容 + 前缀会溢出到第 2 块')
   assertEqual(big.length, expectedChunks(CHUNK_SIZE * 6), '6 个分块的内容 + 前缀')
   assertTrue(big.length > small.length, '大文件的上报次数应更多')

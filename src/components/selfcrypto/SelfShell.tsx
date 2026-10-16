@@ -5,7 +5,15 @@
 import type { ReactNode } from 'react'
 import { SELF_TABS, useApp, type SelfTab } from '../../app/store.ts'
 
-export function SelfShell({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
+export function SelfShell({
+  title,
+  description,
+  children,
+}: {
+  title: string
+  description?: string
+  children: ReactNode
+}) {
   const t = useApp((s) => s.t)
   const selfTab = useApp((s) => s.selfTab)
   const setSelfTab = useApp((s) => s.setSelfTab)

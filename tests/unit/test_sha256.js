@@ -31,7 +31,8 @@ await runner.test('分片 update 与一次 update 结果一致（跨块边界分
   const whole = sha256Hex(data)
   for (const size of [1, 7, 63, 64, 65, 128, 499]) {
     const hasher = new Sha256()
-    for (let off = 0; off < data.length; off += size) hasher.update(data.subarray(off, Math.min(off + size, data.length)))
+    for (let off = 0; off < data.length; off += size)
+      hasher.update(data.subarray(off, Math.min(off + size, data.length)))
     assertEqual(hasher.hexDigest(false), whole, `分片大小 ${size}`)
   }
 })

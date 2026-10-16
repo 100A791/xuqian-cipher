@@ -122,7 +122,8 @@ function loadSettings(): PersistedSettings {
       clipboardClear: parsed.clipboardClear !== false,
       encryptMeta: parsed.encryptMeta !== false,
       timestampSalt: parsed.timestampSalt === true,
-      autoLockMinutes: Number.isFinite(autoLock) && autoLock >= 0 && autoLock <= 120 ? autoLock : fallback.autoLockMinutes,
+      autoLockMinutes:
+        Number.isFinite(autoLock) && autoLock >= 0 && autoLock <= 120 ? autoLock : fallback.autoLockMinutes,
       mode: parsed.mode === 'self' ? 'self' : parsed.mode === 'simple' ? 'simple' : null,
     }
   } catch {
@@ -344,7 +345,14 @@ export const useApp = create<AppState>((set, get) => ({
     }
     set({
       locked: true,
-      keyModal: { ...get().keyModal, open: false, view: null, copiedHex: false, copiedBase64: false, downloaded: false },
+      keyModal: {
+        ...get().keyModal,
+        open: false,
+        view: null,
+        copiedHex: false,
+        copiedBase64: false,
+        downloaded: false,
+      },
       decryptFile: null,
       decrypting: false,
       encrypting: false,
@@ -362,7 +370,13 @@ export const useApp = create<AppState>((set, get) => ({
     // 日志 id 用 CSPRNG 生成（不再用 Math.random）：本项目对"随机"只有一条路径，避免留下例外。
     const rand = new Uint32Array(1)
     crypto.getRandomValues(rand)
-    const entry: LogEntry = { id: Date.now() * 1000 + (rand[0] % 1000), ts: Date.now(), level, action, detail: safe.slice(0, 200) }
+    const entry: LogEntry = {
+      id: Date.now() * 1000 + (rand[0] % 1000),
+      ts: Date.now(),
+      level,
+      action,
+      detail: safe.slice(0, 200),
+    }
     const next = [...get().log, entry].slice(-LOG_LIMIT)
     persistLog(next)
     set({ log: next })

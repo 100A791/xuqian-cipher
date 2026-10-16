@@ -90,7 +90,19 @@ const subkeys = (masterKey, salt) => {
 }
 
 /** 手写头部（独立于 serializeHeader）。 */
-function refHeaderBytes({ flags, timestamp, bootNonce, rulesLen, chunkSize, segments, splitMode, segmentOrder, salt, keyCheck, payloadLen }) {
+function refHeaderBytes({
+  flags,
+  timestamp,
+  bootNonce,
+  rulesLen,
+  chunkSize,
+  segments,
+  splitMode,
+  segmentOrder,
+  salt,
+  keyCheck,
+  payloadLen,
+}) {
   const out = new Uint8Array(HEADER_LEN)
   const dv = new DataView(out.buffer)
   out.set(MAGIC, 0)
@@ -118,7 +130,8 @@ function refMetadataKv(nameText) {
 }
 
 /** 纯交错拆分（输入是自然顺序的字节流时适用）。 */
-const splitShares = (bytes, segments) => Array.from({ length: segments }, (_, j) => bytes.filter((_, i) => i % segments === j))
+const splitShares = (bytes, segments) =>
+  Array.from({ length: segments }, (_, j) => bytes.filter((_, i) => i % segments === j))
 
 /** 纯合并：按逻辑下标 i % segments 回放。 */
 function joinLogical(shares) {
@@ -269,7 +282,14 @@ const key = data(16, 99)
 
 await runner.test('往返（小文件）：内容与元数据都能还原', async () => {
   const content = data(1000, 3)
-  const { cipherBytes, keyK } = encryptFile(content, [['name', '秘密.txt'], ['size', 1000n]], { masterKey: key, now: 0x01020304 })
+  const { cipherBytes, keyK } = encryptFile(
+    content,
+    [
+      ['name', '秘密.txt'],
+      ['size', 1000n],
+    ],
+    { masterKey: key, now: 0x01020304 },
+  )
   const result = await decryptFile(cipherBytes, keyK)
   assertBytesEqual(result.plainBytes, content, '内容')
   assertEqual(result.metadata.get('name'), '秘密.txt', '元数据 name')
@@ -312,9 +332,16 @@ await runner.test('密文里看不到明文，也看不到元数据里的文件�
 
 await runner.test('交叉验证 A：自研加密 → OpenSSL 独立解密', () => {
   const content = data(5000, 11)
-  const { cipherBytes } = encryptFile(content, [['name', 'cross.bin'], ['mime', 'application/octet-stream']], {
-    masterKey: key,
-  })
+  const { cipherBytes } = encryptFile(
+    content,
+    [
+      ['name', 'cross.bin'],
+      ['mime', 'application/octet-stream'],
+    ],
+    {
+      masterKey: key,
+    },
+  )
   const reference = referenceDecrypt(cipherBytes, key)
   assertBytesEqual(reference.content, content, '参考实现解出的内容')
   assertTrue(reference.metaLen > 0, '参考实现读到元数据长度')
@@ -366,12 +393,42 @@ await runner.test('向后兼容：v1 旧格式（flags=0，仅 64 位 nonce）�
 // ---------------------------------------------------------------------------
 
 const flips = [
-  ['头部标志位', (b) => { b[9] ^= 0x01 }],
-  ['时间戳', (b) => { b[12] ^= 0xff }],
-  ['盐', (b) => { b[45] ^= 0x01 }],
-  ['KEY_CHECK', (b) => { b[77] ^= 0x01 }],
-  ['载荷中的一个字节', (b) => { b[b.length - MAC_LEN - 1] ^= 0x01 }],
-  ['MAC 自身', (b) => { b[b.length - 1] ^= 0x01 }],
+  [
+    '头部标志位',
+    (b) => {
+      b[9] ^= 0x01
+    },
+  ],
+  [
+    '时间戳',
+    (b) => {
+      b[12] ^= 0xff
+    },
+  ],
+  [
+    '盐',
+    (b) => {
+      b[45] ^= 0x01
+    },
+  ],
+  [
+    'KEY_CHECK',
+    (b) => {
+      b[77] ^= 0x01
+    },
+  ],
+  [
+    '载荷中的一个字节',
+    (b) => {
+      b[b.length - MAC_LEN - 1] ^= 0x01
+    },
+  ],
+  [
+    'MAC 自身',
+    (b) => {
+      b[b.length - 1] ^= 0x01
+    },
+  ],
 ]
 
 for (const [label, mutate] of flips) {
@@ -418,7 +475,10 @@ await runner.test('截断文件 → 统一失败（且内部原因是格式问�
     error = e
   }
   assertEqual(error?.message, '解密失败', '对外文案统一')
-  assertTrue(reasons.some((r) => r.startsWith('format:')), `内部原因应为格式问题，实际 ${JSON.stringify(reasons)}`)
+  assertTrue(
+    reasons.some((r) => r.startsWith('format:')),
+    `内部原因应为格式问题，实际 ${JSON.stringify(reasons)}`,
+  )
 })
 
 await runner.test('checkKey：正确密钥为真、错误密钥为假，且不改动文件', () => {

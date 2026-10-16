@@ -49,7 +49,12 @@ const B64_LOOKUP = (() => {
 })()
 
 export function base64ToBytes(b64: string): Uint8Array {
-  const clean = b64.trim().replace(/[\s\r\n]/g, '').replace(/-/g, '+').replace(/_/g, '/').replace(/=+$/, '')
+  const clean = b64
+    .trim()
+    .replace(/[\s\r\n]/g, '')
+    .replace(/-/g, '+')
+    .replace(/_/g, '/')
+    .replace(/=+$/, '')
   if (clean.length === 0) throw new Error('INVALID_BASE64')
   if (!/^[A-Za-z0-9+/]+$/.test(clean)) throw new Error('INVALID_BASE64')
   const outLen = Math.floor((clean.length * 6) / 8)

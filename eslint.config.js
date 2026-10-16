@@ -21,15 +21,7 @@ import reactHooks from 'eslint-plugin-react-hooks'
 
 export default tseslint.config(
   {
-    ignores: [
-      'dist/**',
-      'public/**',
-      'node_modules/**',
-      'certs/**',
-      'coverage/**',
-      '**/*.XUQIAN',
-      '**/*.XUQIANKEY',
-    ],
+    ignores: ['dist/**', 'public/**', 'node_modules/**', 'certs/**', 'coverage/**', '**/*.XUQIAN', '**/*.XUQIANKEY'],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
@@ -62,13 +54,7 @@ export default tseslint.config(
 
   // Node 侧：测试 / 脚本 / 命令行工具 / 配置文件
   {
-    files: [
-      'scripts/**/*.{mjs,js}',
-      'tests/**/*.js',
-      'tools/**/*.js',
-      'cli/**/*.{ts,mjs}',
-      '*.{js,mjs,ts}',
-    ],
+    files: ['scripts/**/*.{mjs,js}', 'tests/**/*.js', 'tools/**/*.js', 'cli/**/*.{ts,mjs}', '*.{js,mjs,ts}'],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: 'module',

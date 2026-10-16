@@ -130,11 +130,9 @@ export function sobelMagnitude(luma, width, height) {
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const gx =
-        -at(x - 1, y - 1) - 2 * at(x - 1, y) - at(x - 1, y + 1) +
-        at(x + 1, y - 1) + 2 * at(x + 1, y) + at(x + 1, y + 1)
+        -at(x - 1, y - 1) - 2 * at(x - 1, y) - at(x - 1, y + 1) + at(x + 1, y - 1) + 2 * at(x + 1, y) + at(x + 1, y + 1)
       const gy =
-        -at(x - 1, y - 1) - 2 * at(x, y - 1) - at(x + 1, y - 1) +
-        at(x - 1, y + 1) + 2 * at(x, y + 1) + at(x + 1, y + 1)
+        -at(x - 1, y - 1) - 2 * at(x, y - 1) - at(x + 1, y - 1) + at(x - 1, y + 1) + 2 * at(x, y + 1) + at(x + 1, y + 1)
       out[y * width + x] = Math.sqrt(gx * gx + gy * gy)
     }
   }

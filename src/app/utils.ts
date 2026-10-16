@@ -136,9 +136,7 @@ async function walkEntry(entry: FileSystemEntry, prefix: string, out: DroppedEnt
     const reader = (entry as FileSystemDirectoryEntry).createReader()
     let batch: FileSystemEntry[] = []
     do {
-      batch = await new Promise<FileSystemEntry[]>((resolve, reject) =>
-        reader.readEntries(resolve, reject),
-      )
+      batch = await new Promise<FileSystemEntry[]>((resolve, reject) => reader.readEntries(resolve, reject))
       for (const child of batch) await walkEntry(child, `${prefix}${entry.name}/`, out)
     } while (batch.length > 0)
   }

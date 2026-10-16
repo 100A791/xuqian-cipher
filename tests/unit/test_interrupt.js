@@ -26,7 +26,14 @@ const key = data(16, 5)
 
 /** 造一个合法密文，并用固定规则块长度便于按偏移截断。 */
 const content = data(3000, 9)
-const { cipherBytes } = encryptFile(content, [['name', 'x.bin'], ['mime', 'text/plain']], { masterKey: key })
+const { cipherBytes } = encryptFile(
+  content,
+  [
+    ['name', 'x.bin'],
+    ['mime', 'text/plain'],
+  ],
+  { masterKey: key },
+)
 const total = cipherBytes.length
 
 /** 尝试解密，返回 { threw, message, code, returned }。 */
@@ -42,8 +49,24 @@ async function attempt(bytes) {
 await runner.test('任意位置截断都必须统一失败，且绝不返回部分明文', async () => {
   // 横扫：头内 / 规则块 / 载荷头 / 载荷中 / 缺一字节 MAC，各取若干点
   const cutPoints = [
-    0, 1, 2, 8, 9, 16, 32, HEADER_LEN - 1, HEADER_LEN, HEADER_LEN + 4,
-    120, 500, 1500, 2500, total - 64, total - 33, total - 32, total - 1,
+    0,
+    1,
+    2,
+    8,
+    9,
+    16,
+    32,
+    HEADER_LEN - 1,
+    HEADER_LEN,
+    HEADER_LEN + 4,
+    120,
+    500,
+    1500,
+    2500,
+    total - 64,
+    total - 33,
+    total - 32,
+    total - 1,
   ]
   const failures = []
   for (const cut of cutPoints) {
@@ -62,8 +85,14 @@ await runner.test('截断后的返回值为 null（确实没有把半个明文�
   for (const cut of [HEADER_LEN + 10, 1000, total - 40]) {
     results.push(await attempt(cipherBytes.slice(0, cut)))
   }
-  assertTrue(results.every((r) => r.returned === null), '任何截断都不应返回结果对象')
-  assertTrue(results.every((r) => r.threw === true), '都应抛错')
+  assertTrue(
+    results.every((r) => r.returned === null),
+    '任何截断都不应返回结果对象',
+  )
+  assertTrue(
+    results.every((r) => r.threw === true),
+    '都应抛错',
+  )
 })
 
 await runner.test('空文件 / 单字节 / 只剩 MAC 长度 → 统一失败', async () => {
@@ -103,13 +132,48 @@ await runner.test('同样长度的全零 / 全随机文件 → 统一失败（�
 
 await runner.test('头部声明被篡改（长度/规则块长度）→ 统一失败，而不是按错误边界乱读', async () => {
   const cases = [
-    ['载荷长度 +1', (b) => { new DataView(b.buffer).setUint32(93, new DataView(b.buffer).getUint32(93) + 1) }],
-    ['载荷长度归零', (b) => { new DataView(b.buffer).setUint32(93, 0) }],
-    ['规则块长度 +8', (b) => { new DataView(b.buffer).setUint32(32, new DataView(b.buffer).getUint32(32) + 8) }],
-    ['段数改成 1', (b) => { b[40] = 1 }],
-    ['拆分方式改成 9', (b) => { b[41] = 9 }],
-    ['版本号改成 2', (b) => { b[8] = 2 }],
-    ['保留字段写 1', (b) => { new DataView(b.buffer).setUint16(10, 1) }],
+    [
+      '载荷长度 +1',
+      (b) => {
+        new DataView(b.buffer).setUint32(93, new DataView(b.buffer).getUint32(93) + 1)
+      },
+    ],
+    [
+      '载荷长度归零',
+      (b) => {
+        new DataView(b.buffer).setUint32(93, 0)
+      },
+    ],
+    [
+      '规则块长度 +8',
+      (b) => {
+        new DataView(b.buffer).setUint32(32, new DataView(b.buffer).getUint32(32) + 8)
+      },
+    ],
+    [
+      '段数改成 1',
+      (b) => {
+        b[40] = 1
+      },
+    ],
+    [
+      '拆分方式改成 9',
+      (b) => {
+        b[41] = 9
+      },
+    ],
+    [
+      '版本号改成 2',
+      (b) => {
+        b[8] = 2
+      },
+    ],
+    [
+      '保留字段写 1',
+      (b) => {
+        new DataView(b.buffer).setUint16(10, 1)
+      },
+    ],
   ]
   const failures = []
   for (const [label, mutate] of cases) {
@@ -144,7 +208,10 @@ await runner.test('不同中断原因 → 对外文案完全一致，内部原�
   // （MAC 校验排在 KEY_CHECK 之前，两条失败路径都必须先付出完整 MAC 的代价）。
   // 因此这里只要求「结构问题」与「密码学问题」可区分，不再要求三种互不相同。
   assertTrue(reasons.includes('mac-mismatch'), `应至少有一条 mac-mismatch，实际 ${JSON.stringify(reasons)}`)
-  assertTrue(reasons.some((r) => r.startsWith('format:')), `应能区分出结构问题，实际 ${JSON.stringify(reasons)}`)
+  assertTrue(
+    reasons.some((r) => r.startsWith('format:')),
+    `应能区分出结构问题，实际 ${JSON.stringify(reasons)}`,
+  )
   assertTrue(new Set(reasons).size >= 2, `内部原因至少应能区分两类，实际 ${JSON.stringify(reasons)}`)
   // 内部原因绝不能出现在对外文案里
   for (const reason of reasons) {

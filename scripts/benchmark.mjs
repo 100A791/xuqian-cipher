@@ -114,7 +114,10 @@ for (const sizeMB of [1, 4]) {
 
 // ------------------------------------------------------------------ 水印
 console.log('\n· 图片水印（LSB 嵌入 / 提取）')
-for (const [w, h] of [[1000, 1000], [2000, 2000]]) {
+for (const [w, h] of [
+  [1000, 1000],
+  [2000, 2000],
+]) {
   const image = createImage(w, h)
   const mp = (w * h) / 1e6
   const ms = median(() => embedWatermark(image, { publicInfo: '版权信息', privateInfo: '内部编号' }), 3)
@@ -131,7 +134,10 @@ for (const [w, h] of [[1000, 1000], [2000, 2000]]) {
 
 // ------------------------------------------------------------------ AI 检测
 console.log('\n· AI 检测')
-for (const [w, h] of [[1000, 1000], [4000, 3000]]) {
+for (const [w, h] of [
+  [1000, 1000],
+  [4000, 3000],
+]) {
   const image = createImage(w, h)
   // 填点内容，避免全常量图让某些分支被跳过
   for (let p = 0; p < w * h; p++) {

@@ -2,7 +2,12 @@
 import { useMemo } from 'react'
 import { useApp } from '../app/store.ts'
 import type { MessageKey } from '../app/i18n.ts'
-import { estimatePassphrase, passphraseScore, type PassphraseLevel, type PassphraseWarning } from '../crypto/passphrase.ts'
+import {
+  estimatePassphrase,
+  passphraseScore,
+  type PassphraseLevel,
+  type PassphraseWarning,
+} from '../crypto/passphrase.ts'
 
 const LEVEL_KEY: Record<PassphraseLevel, MessageKey> = {
   weak: 'strength.weak',

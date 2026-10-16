@@ -26,7 +26,10 @@ export function SelfHome() {
         {ENTRIES.map((entry) => (
           <section key={entry.key} className="xq-panel flex flex-col gap-2 p-4" data-testid={`sc-entry-${entry.key}`}>
             <div className="flex items-center gap-2">
-              <span className="xq-mono rounded px-2 py-0.5 text-[11px] xq-muted" style={{ border: '1px solid var(--xq-line)' }}>
+              <span
+                className="xq-mono rounded px-2 py-0.5 text-[11px] xq-muted"
+                style={{ border: '1px solid var(--xq-line)' }}
+              >
                 {entry.badge}
               </span>
               <h3 className="text-sm font-semibold">{t(`sc.nav.${entry.key}` as 'sc.nav.file')}</h3>

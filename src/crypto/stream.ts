@@ -597,14 +597,27 @@ export async function keyCheck(
     const firstChunkHash = bytesToHex(sha256(plaintext)).toUpperCase()
     zeroize(plaintext)
     const shouldVerify = options.verifyHash !== false && declaredHash !== undefined
-    return { ...base, matched: true, firstChunkHash, hashVerified: shouldVerify ? declaredHash === firstChunkHash : false }
+    return {
+      ...base,
+      matched: true,
+      firstChunkHash,
+      hashVerified: shouldVerify ? declaredHash === firstChunkHash : false,
+    }
   }
 
   // 多块文件：只读第一块并认证
   const block = await reader.readExactly(plan.blockTotals[0])
   const aad = headerAad(header)
   try {
-    const plain = await openBlock(header, block, plan.plainSizes[0], 0, aad, masterKey, tsSaltContext(header.flags, header.meta))
+    const plain = await openBlock(
+      header,
+      block,
+      plan.plainSizes[0],
+      0,
+      aad,
+      masterKey,
+      tsSaltContext(header.flags, header.meta),
+    )
     zeroize(plain)
   } catch (error) {
     if (/AUTH_FAILED/.test(String((error as Error)?.message ?? error))) {

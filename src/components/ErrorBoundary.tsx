@@ -55,8 +55,7 @@ export class ErrorBoundary extends Component<Props, State> {
           <div className="space-y-2 text-sm">
             <p>
               <strong>先说结论：这不等于你的密钥没了。</strong>
-              主密钥只存在于加密 Worker 的内存里。界面崩溃既不会把它写入磁盘，也不会把它上传
-              —— 本站没有任何网络请求。
+              主密钥只存在于加密 Worker 的内存里。界面崩溃既不会把它写入磁盘，也不会把它上传 —— 本站没有任何网络请求。
             </p>
             <p>
               <strong>如果你刚加密完、还没保存密钥：先别刷新。</strong>

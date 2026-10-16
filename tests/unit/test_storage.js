@@ -113,7 +113,18 @@ await runner.test('允许字段白名单：密钥类字段一律拒绝写入', (
   assertNoKeyMaterial(base)
   assertTrue(true, '正常记录应通过')
 
-  for (const field of ['key', 'keyK', 'masterKey', 'master_key', 'passphrase', 'password', 'secret', 'WK', 'watermarkKey', 'recoveryCode']) {
+  for (const field of [
+    'key',
+    'keyK',
+    'masterKey',
+    'master_key',
+    'passphrase',
+    'password',
+    'secret',
+    'WK',
+    'watermarkKey',
+    'recoveryCode',
+  ]) {
     let threw = false
     try {
       assertNoKeyMaterial({ ...base, [field]: 'deadbeef' })
@@ -227,7 +238,11 @@ const mkRecord = (name, bytes, savedAt = 1700000000000) => ({
 await runner.test('备份：导出→导入 往返，名字/密文/时间/版本都还原', () => {
   const records = [
     mkRecord('a.bin.xuqian', Uint8Array.of(1, 2, 3)),
-    mkRecord('中文名.xuqian', Uint8Array.from({ length: 300 }, (_, i) => i & 0xff), 1700000001234),
+    mkRecord(
+      '中文名.xuqian',
+      Uint8Array.from({ length: 300 }, (_, i) => i & 0xff),
+      1700000001234,
+    ),
   ]
   const archive = exportLibraryArchive(records)
   assertEqual(archive[0], 0x58, 'magic 首字节应为 X')

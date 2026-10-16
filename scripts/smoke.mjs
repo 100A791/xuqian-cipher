@@ -74,7 +74,9 @@ const OUR_PROFILE_MARKER = 'xuqian-smoke'
 function killStrayBrowsers() {
   const script = [
     "$targets = @(Get-CimInstance Win32_Process -Filter \"Name='msedge.exe' or Name='chrome.exe'\" |",
-    "  Where-Object { $_.CommandLine -and $_.CommandLine -match '--headless' -and $_.CommandLine -match '" + OUR_PROFILE_MARKER + "' });",
+    "  Where-Object { $_.CommandLine -and $_.CommandLine -match '--headless' -and $_.CommandLine -match '" +
+      OUR_PROFILE_MARKER +
+      "' });",
     'if ($targets.Count -gt 0) {',
     '  $targets | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue };',
     '  Write-Output ("killed " + $targets.Count)',
@@ -82,7 +84,8 @@ function killStrayBrowsers() {
   ].join(' ')
   const result = spawnSync('powershell', ['-NoProfile', '-NonInteractive', '-Command', script], { encoding: 'utf8' })
   const out = (result.stdout ?? '').trim()
-  if (out.startsWith('killed')) console.log(`[smoke] 已清理自己遗留的测试实例（${out.slice(7)} 个，只匹配 --headless + ${OUR_PROFILE_MARKER}）`)
+  if (out.startsWith('killed'))
+    console.log(`[smoke] 已清理自己遗留的测试实例（${out.slice(7)} 个，只匹配 --headless + ${OUR_PROFILE_MARKER}）`)
 }
 
 async function waitForDevtools(timeoutMs = 20000) {
@@ -297,7 +300,11 @@ const A11Y_AUDIT = `
 /** 在当前页面跑一次无障碍审计并登记结果。 */
 async function auditA11y(cdp, label) {
   const result = await cdp.eval(A11Y_AUDIT)
-  check(`无障碍审计（${label}）`, result.count === 0, result.count === 0 ? `检查了 ${result.controls} 个控件` : result.sample.join(' ｜ '))
+  check(
+    `无障碍审计（${label}）`,
+    result.count === 0,
+    result.count === 0 ? `检查了 ${result.controls} 个控件` : result.sample.join(' ｜ '),
+  )
   return result
 }
 
@@ -388,7 +395,8 @@ try {
   console.log(`浏览器: ${version.Browser}`)
 
   const targets = await (await fetch(`http://127.0.0.1:${PORT}/json/list`)).json()
-  const page = targets.find((t) => t.type === 'page' && t.url.startsWith('http')) ?? targets.find((t) => t.type === 'page')
+  const page =
+    targets.find((t) => t.type === 'page' && t.url.startsWith('http')) ?? targets.find((t) => t.type === 'page')
   if (!page) throw new Error('找不到页面目标')
 
   cdp = await Cdp.attach(page.webSocketDebuggerUrl)
@@ -398,7 +406,12 @@ try {
   await cdp.send('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: downloadDir })
 
   // 必须先等页面真正加载完（否则可能仍在 about:blank，相对 URL 无法解析）
-  await waitFor(cdp, `location.protocol.startsWith('http') && document.querySelector('#root')?.children.length > 0`, 60000, '页面加载完成')
+  await waitFor(
+    cdp,
+    `location.protocol.startsWith('http') && document.querySelector('#root')?.children.length > 0`,
+    60000,
+    '页面加载完成',
+  )
   // 关闭动画/过渡，保证自动化断言期间布局稳定
   await cdp.eval(`document.documentElement.dataset.test = '1'; return true;`)
 
@@ -468,10 +481,16 @@ try {
       simpleText: simple ? simple.innerText.replace(/\\s+/g, ' ') : '',
     };
   `)
-  check('开始页展示两条加密路线（简单加密 / 自研加密）', startProbe.hasStart && startProbe.hasSimple && startProbe.hasSelf)
+  check(
+    '开始页展示两条加密路线（简单加密 / 自研加密）',
+    startProbe.hasStart && startProbe.hasSimple && startProbe.hasSelf,
+  )
   check(
     '开始页对两条路线都给出了说明',
-    /简单加密/.test(startProbe.simpleText) && /成熟/.test(startProbe.simpleText) && /自研加密/.test(startProbe.selfText) && /第三方/.test(startProbe.selfText),
+    /简单加密/.test(startProbe.simpleText) &&
+      /成熟/.test(startProbe.simpleText) &&
+      /自研加密/.test(startProbe.selfText) &&
+      /第三方/.test(startProbe.selfText),
     startProbe.simpleText.slice(0, 40),
   )
   // 断言口径跟着界面文案走，但"测的是什么"必须保持：自研卡片要如实说明
@@ -536,7 +555,11 @@ try {
         target: ${testId ? `!!document.querySelector('[data-testid="${testId}"]')` : 'true'},
       };
     `)
-    check(`自研路线「${key}」页可独立打开且元素齐备`, probe.shell === true && probe.target === true, JSON.stringify(probe))
+    check(
+      `自研路线「${key}」页可独立打开且元素齐备`,
+      probe.shell === true && probe.target === true,
+      JSON.stringify(probe),
+    )
   }
 
   // ---- 真实链路 1：加密页真的加密一个文件，并给出 32 位十六进制密钥 ----
@@ -565,7 +588,11 @@ try {
     const node = document.querySelector('[data-testid="sc-file-slow-warn"]');
     return node ? node.innerText.replace(/\\s+/g, ' ') : '';
   `)
-  check('选大文件时如实提示速度（约 1.8–2 MB/s + 预计秒数）', /1\.8–2 MB\/s/.test(slowWarn) && /~\d+ s/.test(slowWarn), slowWarn.slice(0, 90))
+  check(
+    '选大文件时如实提示速度（约 1.8–2 MB/s + 预计秒数）',
+    /1\.8–2 MB\/s/.test(slowWarn) && /~\d+ s/.test(slowWarn),
+    slowWarn.slice(0, 90),
+  )
 
   // ---- G11：大文件加密走 Worker —— 用"定时器在加密期间还能触发"证明主线程没被阻塞 ----
   await cdp.eval(`
@@ -610,11 +637,7 @@ try {
   // 注意：进度条在 busy 结束时就被卸载，所以"在界面上看到 100%"本身是不稳的断言。
   // 这里只断言界面真能验证的部分：多次采样、值在推进、单调不回退。
   // "最后一次 done === total"由内核层单测（test_progress）负责，那才是准确的位置。
-  check(
-    'G11：进度单调不回退，且确实在推进（界面层）',
-    g11.monotonic === true && g11.max >= 30,
-    JSON.stringify(g11),
-  )
+  check('G11：进度单调不回退，且确实在推进（界面层）', g11.monotonic === true && g11.max >= 30, JSON.stringify(g11))
   check('G11：明确告知"在后台线程处理、界面不会卡住"', g11.noteSeen === true, JSON.stringify(g11))
   const bigResult = await cdp.eval(`
     const node = document.querySelector('[data-testid="sc-file-result"]');
@@ -672,7 +695,11 @@ try {
   await cdp.eval(`document.querySelector('[data-testid="sc-wm-extract"]').click(); return true;`)
   await sleep(1500)
   const wmExtract = await cdp.eval(`return document.body.innerText.replace(/\\s+/g, ' ')`)
-  check('对未嵌水印的图提取 → 明确提示「未找到可识别的水印」', /未找到可识别的水印/.test(wmExtract), wmExtract.slice(0, 60))
+  check(
+    '对未嵌水印的图提取 → 明确提示「未找到可识别的水印」',
+    /未找到可识别的水印/.test(wmExtract),
+    wmExtract.slice(0, 60),
+  )
 
   // ---- 有形水印：UI 接线 ----
   await cdp.eval(`
@@ -697,7 +724,11 @@ try {
     const text = document.querySelector('[data-testid="sc-wm-visible-text"]');
     return { checked: box ? box.checked : null, text: text ? text.value : null };
   `)
-  check('有形水印表单已就绪（开关已勾、文字已填）', wmForm.checked === true && (wmForm.text ?? '').length > 0, JSON.stringify(wmForm))
+  check(
+    '有形水印表单已就绪（开关已勾、文字已填）',
+    wmForm.checked === true && (wmForm.text ?? '').length > 0,
+    JSON.stringify(wmForm),
+  )
   await cdp.eval(`document.querySelector('[data-testid="sc-wm-embed"]').click(); return true;`)
   // 注意：预览画布在**上一次**嵌入时就已存在，直接等它等于没等（探针会读到旧结果）。
   // 必须等"有形水印实际参数"这一行真的变成 px/%/px 形态。
@@ -716,7 +747,11 @@ try {
       params: result ? result.innerText.replace(/\\s+/g, ' ') : '',
     };
   `)
-  check('有形水印：界面出现预览画布且尺寸正确', visibleProbe.width > 100 && visibleProbe.height > 100, JSON.stringify(visibleProbe))
+  check(
+    '有形水印：界面出现预览画布且尺寸正确',
+    visibleProbe.width > 100 && visibleProbe.height > 100,
+    JSON.stringify(visibleProbe),
+  )
   check(
     '有形水印：界面如实报出实际参数（字号/透明度/边距）',
     /\d+px \/ \d+% \/ \d+px/.test(visibleProbe.params),
@@ -854,7 +889,11 @@ try {
     return node ? node.innerText.replace(/\\s+/g, ' ') : '';
   `)
   // 注意：这里是普通正则字面量（不是模板字符串里的表达式），所以用单反斜杠 \d
-  check('平铺模式在界面上可用，并如实报出角度与条数', /-30°/.test(tileUi) && /\d+ (条|tiles)/.test(tileUi), tileUi.slice(0, 110))
+  check(
+    '平铺模式在界面上可用，并如实报出角度与条数',
+    /-30°/.test(tileUi) && /\d+ (条|tiles)/.test(tileUi),
+    tileUi.slice(0, 110),
+  )
 
   // ---- 真实链路 4：AI 检测页给出报告，且报告带「未标定」声明 ----
   await cdp.eval(`document.querySelector('[data-testid="sc-nav-ai"]').click(); return true;`)
@@ -916,7 +955,11 @@ try {
   await cdp.eval(`document.querySelector('[data-testid="sc-decrypt-lib-use"]').click(); return true;`)
   await sleep(400)
   const fromLibrary = await cdp.eval(`return document.body.innerText.replace(/\\s+/g, ' ')`)
-  check('可从本地密文库直接选用密文（无需重新选文件）', /本地密文库/.test(fromLibrary) && /self-plain\.bin\.xuqian/.test(fromLibrary), fromLibrary.slice(0, 80))
+  check(
+    '可从本地密文库直接选用密文（无需重新选文件）',
+    /本地密文库/.test(fromLibrary) && /self-plain\.bin\.xuqian/.test(fromLibrary),
+    fromLibrary.slice(0, 80),
+  )
 
   // 直接查库，确认落库记录里**没有**任何密钥类字段（SPEC §7 红线，在真浏览器里验）
   const storedFields = await cdp.eval(`
@@ -953,7 +996,11 @@ try {
       empty: !!document.querySelector('[data-testid="sc-decrypt-lib-empty"]'),
     };
   `)
-  check('删除后本地密文库为空', libraryAfterDelete.items === 0 && libraryAfterDelete.empty === true, JSON.stringify(libraryAfterDelete))
+  check(
+    '删除后本地密文库为空',
+    libraryAfterDelete.items === 0 && libraryAfterDelete.empty === true,
+    JSON.stringify(libraryAfterDelete),
+  )
 
   // ---- 整库备份（D36）：导出 → 清库 → 导入 → 恢复 ----
   // 走页面自己的模块，在**真浏览器 + 真 IndexedDB** 里跑一遍"清浏览器数据后自救"的完整链路。
@@ -981,7 +1028,11 @@ try {
   `)
   check(
     '备份：导出→清库→导入 能把密文库恢复回来（真浏览器 + 真 IndexedDB）',
-    backup.before >= 2 && backup.afterClear === 0 && backup.afterImport === backup.before && backup.restoredA && backup.restoredCn,
+    backup.before >= 2 &&
+      backup.afterClear === 0 &&
+      backup.afterImport === backup.before &&
+      backup.restoredA &&
+      backup.restoredCn,
     JSON.stringify(backup),
   )
   check(
@@ -996,7 +1047,11 @@ try {
       importInput: !!document.querySelector('[data-testid="sc-decrypt-lib-import"]'),
     };
   `)
-  check('备份：解密页有「导出整库备份」与「导入备份」入口', backupUi.exportBtn && backupUi.importInput, JSON.stringify(backupUi))
+  check(
+    '备份：解密页有「导出整库备份」与「导入备份」入口',
+    backupUi.exportBtn && backupUi.importInput,
+    JSON.stringify(backupUi),
+  )
 
   // ---- 用量与配额告警（D38）：如实显示"多少条 / 占配额多少"，且**不自动删任何东西** ----
   // 上面的备份测试是**直接用模块**写库的，界面的用量状态还是旧的 —— 所以这里先点「刷新」，
@@ -1082,8 +1137,16 @@ try {
     };
   `)
   check('Hex 为 32 字符（128 位）', typeof keyInfo.hex === 'string' && keyInfo.hex.length === 32, keyInfo.hex ?? 'null')
-  check('Base64 为 24 字符', typeof keyInfo.base64 === 'string' && keyInfo.base64.length === 24, keyInfo.base64 ?? 'null')
-  check('展示密钥指纹', typeof keyInfo.fingerprint === 'string' && /^[0-9A-F]{16}$/.test(keyInfo.fingerprint), keyInfo.fingerprint ?? 'null')
+  check(
+    'Base64 为 24 字符',
+    typeof keyInfo.base64 === 'string' && keyInfo.base64.length === 24,
+    keyInfo.base64 ?? 'null',
+  )
+  check(
+    '展示密钥指纹',
+    typeof keyInfo.fingerprint === 'string' && /^[0-9A-F]{16}$/.test(keyInfo.fingerprint),
+    keyInfo.fingerprint ?? 'null',
+  )
   check('弹窗打开时默认选中密钥', keyInfo.selected === true)
 
   const qrPainted = await cdp.eval(`
@@ -1115,7 +1178,11 @@ try {
   await clickByText(cdp, ['下载 .XUQIANKEY'])
   await sleep(500)
   const keyDownloads = await cdp.eval(`return window.__xqDownloads`)
-  check('可下载 .XUQIANKEY 密钥文件', Array.isArray(keyDownloads) && keyDownloads.some((n) => n.endsWith('.XUQIANKEY')), JSON.stringify(keyDownloads))
+  check(
+    '可下载 .XUQIANKEY 密钥文件',
+    Array.isArray(keyDownloads) && keyDownloads.some((n) => n.endsWith('.XUQIANKEY')),
+    JSON.stringify(keyDownloads),
+  )
 
   await clickByText(cdp, ['我已复制，关闭并销毁'])
   await sleep(400)
@@ -1206,7 +1273,12 @@ try {
   await setTextArea(cdp, '[data-testid=text-cipher]', cipher)
   await setTextArea(cdp, '[data-testid=text-key]', keyInfo.hex.split('').reverse().join(''))
   await clickByText(cdp, ['解密文本', 'Decrypt text'], { exact: true })
-  await waitFor(cdp, `/密钥错误或文件损坏|Wrong key or corrupted file/.test(document.body.innerText)`, 30000, '错误密钥提示')
+  await waitFor(
+    cdp,
+    `/密钥错误或文件损坏|Wrong key or corrupted file/.test(document.body.innerText)`,
+    30000,
+    '错误密钥提示',
+  )
   check('错误密钥提示统一为“密钥错误或文件损坏”（验收 9）', true)
 
   await setTextArea(cdp, '[data-testid=text-key]', keyInfo.hex)
@@ -1218,7 +1290,10 @@ try {
     '正确密钥解密',
   )
   check('正确密钥解密成功、内容一致（验收 3 / 6）', true)
-  check('解密后自动做 SHA-256 校验（验收 6）', /哈希校验：一致|SHA-256 一致/.test(await cdp.eval(`return document.body.innerText`)))
+  check(
+    '解密后自动做 SHA-256 校验（验收 6）',
+    /哈希校验：一致|SHA-256 一致/.test(await cdp.eval(`return document.body.innerText`)),
+  )
 
   // ------------------------------------------------------------------
   // B. 文件模式：真实文件加密 → 下载 → 解密 → 字节级还原
@@ -1281,7 +1356,12 @@ try {
 
     await cdp.eval(`window.__xqDownloads = []; return true;`)
     await clickByText(cdp, ['开始加密'])
-    await waitFor(cdp, `document.querySelector('#xq-key-title') !== null`, 120000, `加密 ${fixture.name} 后弹出密钥弹窗`)
+    await waitFor(
+      cdp,
+      `document.querySelector('#xq-key-title') !== null`,
+      120000,
+      `加密 ${fixture.name} 后弹出密钥弹窗`,
+    )
 
     const fileKey = await cdp.eval(`
       const areas = Array.from(document.querySelectorAll('textarea'));
@@ -1344,7 +1424,11 @@ try {
       await new Promise((r) => setTimeout(r, 400));
       return window.__xqDownloads.find((n) => n.endsWith('.XUQIAN')) ?? null;
     `)
-    check(`加密输出为 .XUQIAN 后缀（${fixture.name}，验收 1）`, typeof encName === 'string' && encName.endsWith('.XUQIAN'), encName ?? 'null')
+    check(
+      `加密输出为 .XUQIAN 后缀（${fixture.name}，验收 1）`,
+      typeof encName === 'string' && encName.endsWith('.XUQIAN'),
+      encName ?? 'null',
+    )
 
     // 等待真实下载落盘
     let encPath = join(downloadDir, encName ?? '')
@@ -1424,7 +1508,9 @@ try {
   `)
   await sleep(800)
   const protectedKeyName = await cdp.eval(`return window.__xqDownloads.find((n) => n.endsWith('.XUQIANKEY')) ?? null;`)
-  console.log(`   [D] 密钥文件下载名 = ${String(protectedKeyName)}，下载目录内容 = ${JSON.stringify(listDir(downloadDir))}`)
+  console.log(
+    `   [D] 密钥文件下载名 = ${String(protectedKeyName)}，下载目录内容 = ${JSON.stringify(listDir(downloadDir))}`,
+  )
   const protectedKeyPath = protectedKeyName ? join(downloadDir, protectedKeyName) : ''
   for (let i = 0; i < 60 && protectedKeyPath && !existsSync(protectedKeyPath); i++) await sleep(200)
   let protectedOk = false
@@ -1439,7 +1525,8 @@ try {
 
   await clickByText(cdp, ['我已复制，关闭并销毁'])
   await sleep(400)
-  if (await cdp.eval(`return /尚未复制或下载密钥/.test(document.body.innerText)`)) await clickByText(cdp, ['确认关闭并销毁'])
+  if (await cdp.eval(`return /尚未复制或下载密钥/.test(document.body.innerText)`))
+    await clickByText(cdp, ['确认关闭并销毁'])
   await waitFor(cdp, `document.querySelector('#xq-key-title') === null`, 20000, '密钥弹窗关闭')
 
   const keyfileCipherName = await cdp.eval(`
@@ -1474,7 +1561,12 @@ try {
     return true;
   `)
   await clickByText(cdp, ['开始解密'])
-  await waitFor(cdp, `/解密完成|Decryption finished/.test(document.body.innerText)`, 120000, '用密钥文件解密（最坏时序）')
+  await waitFor(
+    cdp,
+    `/解密完成|Decryption finished/.test(document.body.innerText)`,
+    120000,
+    '用密钥文件解密（最坏时序）',
+  )
   check('上传 .XUQIANKEY 后立刻解密也能成功（时序回归）', true)
 
   const keyfileRestore = await cdp.eval(`
@@ -1488,7 +1580,11 @@ try {
   console.log(`   [D] 还原下载名 = ${String(keyfileRestore)} | 下载目录 = ${JSON.stringify(listDir(downloadDir))}`)
   for (let i = 0; i < 60 && keyfileRestorePath && !existsSync(keyfileRestorePath); i++) await sleep(200)
   if (keyfileRestorePath && existsSync(keyfileRestorePath)) {
-    check('密钥文件解密后字节一致', readFileSync(keyfileRestorePath).toString('base64') === keyFileFixtureSha, keyfileRestore ?? '')
+    check(
+      '密钥文件解密后字节一致',
+      readFileSync(keyfileRestorePath).toString('base64') === keyFileFixtureSha,
+      keyfileRestore ?? '',
+    )
     check('密钥文件解密还原原文件名', keyfileRestore === 'keyfile-case.dat', keyfileRestore ?? 'null')
   } else {
     check('密钥文件解密后文件已下载', false, keyfileRestore ?? 'null')
@@ -1525,7 +1621,12 @@ try {
   {
     await switchTab(cdp, '解密')
     await uploadFile(cdp, keyfileCipherPath, 'input[type=file]')
-    await waitFor(cdp, `document.body.innerText.includes(${JSON.stringify(keyfileCipherName)})`, 20000, '密文入队（自检用）')
+    await waitFor(
+      cdp,
+      `document.body.innerText.includes(${JSON.stringify(keyfileCipherName)})`,
+      20000,
+      '密文入队（自检用）',
+    )
 
     const selfCheckButtonPresent = await cdp.eval(
       `return document.querySelector('[data-testid="decrypt-key-check"]') !== null`,
@@ -1549,13 +1650,23 @@ try {
     // 所以在超时后**补点一次**再等：考点不变，抖动不再让整轮失败。
     let selfCheckAppeared = true
     try {
-      await waitFor(cdp, `document.querySelector('[data-testid="decrypt-check-result"]') !== null`, 20000, '自检结论出现（首次）')
+      await waitFor(
+        cdp,
+        `document.querySelector('[data-testid="decrypt-check-result"]') !== null`,
+        20000,
+        '自检结论出现（首次）',
+      )
     } catch {
       selfCheckAppeared = false
     }
     if (!selfCheckAppeared) {
       await cdp.eval(`document.querySelector('[data-testid="decrypt-key-check"]').click(); return true;`)
-      await waitFor(cdp, `document.querySelector('[data-testid="decrypt-check-result"]') !== null`, 60000, '自检结论出现（补点后）')
+      await waitFor(
+        cdp,
+        `document.querySelector('[data-testid="decrypt-check-result"]') !== null`,
+        60000,
+        '自检结论出现（补点后）',
+      )
     }
     const goodCheckText = await cdp.eval(`
       const box = document.querySelector('[data-testid="decrypt-check-result"]');
@@ -1586,12 +1697,21 @@ try {
       document.querySelector('[data-testid="decrypt-key-check"]').click();
       return true;
     `)
-    await waitFor(cdp, `document.querySelector('[data-testid="decrypt-check-result"]') !== null`, 90000, '错误密钥自检结论')
+    await waitFor(
+      cdp,
+      `document.querySelector('[data-testid="decrypt-check-result"]') !== null`,
+      90000,
+      '错误密钥自检结论',
+    )
     const badCheckText = await cdp.eval(`
       const box = document.querySelector('[data-testid="decrypt-check-result"]');
       return box ? box.innerText.replace(/\\s+/g, ' ').trim() : '';
     `)
-    check('自检结论：错误密钥判定为不匹配', /密钥错误或文件损坏|Wrong key/.test(badCheckText) && !/密钥匹配/.test(badCheckText), badCheckText)
+    check(
+      '自检结论：错误密钥判定为不匹配',
+      /密钥错误或文件损坏|Wrong key/.test(badCheckText) && !/密钥匹配/.test(badCheckText),
+      badCheckText,
+    )
     check(
       '自检不匹配时不会显示"已通过首块认证"（避免自相矛盾）',
       !/已通过首块认证|first block authenticated/i.test(badCheckText),
@@ -1639,7 +1759,12 @@ try {
     await switchTab(cdp, '解密')
     await uploadFile(cdp, keyfileCipherPath, 'input[type=file]')
     await waitFor(cdp, `document.body.innerText.includes('keyfile-case.dat.XUQIAN')`, 20000, '密文入队')
-    await waitFor(cdp, `document.querySelector('[data-testid="decrypt-preamble-notice"]') !== null`, 20000, '明文声明面板')
+    await waitFor(
+      cdp,
+      `document.querySelector('[data-testid="decrypt-preamble-notice"]') !== null`,
+      20000,
+      '明文声明面板',
+    )
     const noticeShown = await cdp.eval(`
       const box = document.querySelector('[data-testid="decrypt-preamble-notice"]');
       return box ? box.innerText.replace(/\\s+/g, ' ').trim() : '';

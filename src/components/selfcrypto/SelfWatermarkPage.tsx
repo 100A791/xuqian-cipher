@@ -18,12 +18,21 @@ import {
   tileCounts,
 } from '../../selfcrypto/watermark/visible.js'
 import type { SelfImage } from './browser.ts'
-import { downloadBlob, describeFailure, imageDataToPngBlob, imageFileToImageData, paintImageToCanvas } from './browser.ts'
+import {
+  downloadBlob,
+  describeFailure,
+  imageDataToPngBlob,
+  imageFileToImageData,
+  paintImageToCanvas,
+} from './browser.ts'
 import { SelfShell } from './SelfShell.tsx'
 
 const hex = (bytes: Uint8Array) => Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')
 const fromHex = (text: string) => {
-  const clean = text.trim().toLowerCase().replace(/[^0-9a-f]/g, '')
+  const clean = text
+    .trim()
+    .toLowerCase()
+    .replace(/[^0-9a-f]/g, '')
   if (clean.length !== 32) return null
   const out = new Uint8Array(16)
   for (let i = 0; i < 16; i++) out[i] = parseInt(clean.slice(i * 2, i * 2 + 2), 16)
@@ -57,7 +66,11 @@ export function SelfWatermarkPage() {
   const [output, setOutput] = useState<SelfImage | null>(null)
   const [applied, setApplied] = useState<AppliedVisible | null>(null)
   const [embedded, setEmbedded] = useState<{ keyHex: string; size: string; visible: string } | null>(null)
-  const [extracted, setExtracted] = useState<{ publicInfo: string | null; privateInfo: string | null; locked: boolean } | null>(null)
+  const [extracted, setExtracted] = useState<{
+    publicInfo: string | null
+    privateInfo: string | null
+    locked: boolean
+  } | null>(null)
   const previewRef = useRef<HTMLCanvasElement | null>(null)
 
   // 预览：与下载共用同一条绘制路径（putImageData → 按嵌入时冻结的参数叠加有形水印）
@@ -151,15 +164,33 @@ export function SelfWatermarkPage() {
   return (
     <SelfShell title={t('sc.wm.title')} description={t('sc.wm.desc')}>
       <Field label={t('sc.wm.pick')}>
-        <input type="file" accept="image/*" className="xq-input" data-testid="sc-wm-input" onChange={(e) => void pick(e.target.files?.[0])} />
+        <input
+          type="file"
+          accept="image/*"
+          className="xq-input"
+          data-testid="sc-wm-input"
+          onChange={(e) => void pick(e.target.files?.[0])}
+        />
       </Field>
 
       <div className="grid gap-3 sm:grid-cols-2">
         <Field label={t('sc.wm.public')}>
-          <input type="text" className="xq-input" data-testid="sc-wm-public" value={publicInfo} onChange={(e) => setPublicInfo(e.target.value)} />
+          <input
+            type="text"
+            className="xq-input"
+            data-testid="sc-wm-public"
+            value={publicInfo}
+            onChange={(e) => setPublicInfo(e.target.value)}
+          />
         </Field>
         <Field label={t('sc.wm.private')}>
-          <input type="text" className="xq-input" data-testid="sc-wm-private" value={privateInfo} onChange={(e) => setPrivateInfo(e.target.value)} />
+          <input
+            type="text"
+            className="xq-input"
+            data-testid="sc-wm-private"
+            value={privateInfo}
+            onChange={(e) => setPrivateInfo(e.target.value)}
+          />
         </Field>
       </div>
       <Field label={t('sc.wm.key')} hint={t('sc.wm.keyHint')}>
@@ -236,7 +267,13 @@ export function SelfWatermarkPage() {
         <button type="button" className="xq-btn" data-testid="sc-wm-embed" disabled={busy || !image} onClick={runEmbed}>
           {busy ? t('sc.working') : t('sc.wm.embed')}
         </button>
-        <button type="button" className="xq-btn" data-testid="sc-wm-extract" disabled={busy || !image} onClick={runExtract}>
+        <button
+          type="button"
+          className="xq-btn"
+          data-testid="sc-wm-extract"
+          disabled={busy || !image}
+          onClick={runExtract}
+        >
           {t('sc.wm.extract')}
         </button>
       </div>
@@ -254,7 +291,12 @@ export function SelfWatermarkPage() {
       {output ? (
         <div className="flex flex-col gap-1">
           <span className="text-[12px] font-semibold">{t('sc.wm.preview')}</span>
-          <canvas ref={previewRef} className="max-w-full rounded" data-testid="sc-wm-preview" style={{ border: '1px solid #3333' }} />
+          <canvas
+            ref={previewRef}
+            className="max-w-full rounded"
+            data-testid="sc-wm-preview"
+            style={{ border: '1px solid #3333' }}
+          />
         </div>
       ) : null}
 

@@ -22,7 +22,9 @@ export function computeBlockiness(luma, width, height, size = BLOCK) {
   let innerCount = 0
   for (let y = 1; y < height; y++) {
     for (let x = 1; x < width; x++) {
-      const d = Math.abs(luma[y * width + x] - luma[y * width + x - 1]) + Math.abs(luma[y * width + x] - luma[(y - 1) * width + x])
+      const d =
+        Math.abs(luma[y * width + x] - luma[y * width + x - 1]) +
+        Math.abs(luma[y * width + x] - luma[(y - 1) * width + x])
       if (x % size === 0 || y % size === 0) {
         boundary += d
         boundaryCount += 1
@@ -289,8 +291,8 @@ export function haarDwt2d(plane, width, height) {
   const hhBand = new Float64Array(hw * hh)
   for (let y = 0; y < hh; y++) {
     for (let x = 0; x < hw; x++) {
-      const a = plane[(2 * y) * width + 2 * x]
-      const b = plane[(2 * y) * width + 2 * x + 1]
+      const a = plane[2 * y * width + 2 * x]
+      const b = plane[2 * y * width + 2 * x + 1]
       const c = plane[(2 * y + 1) * width + 2 * x]
       const d = plane[(2 * y + 1) * width + 2 * x + 1]
       const i = y * hw + x

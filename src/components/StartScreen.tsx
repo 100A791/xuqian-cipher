@@ -10,7 +10,9 @@ import { Alert } from './ui.tsx'
 function Bullet({ children }: { children: string }) {
   return (
     <li className="flex gap-2 text-[12px] leading-relaxed">
-      <span aria-hidden className="mt-[2px] text-[10px] opacity-60">◆</span>
+      <span aria-hidden className="mt-[2px] text-[10px] opacity-60">
+        ◆
+      </span>
       <span>{children}</span>
     </li>
   )
@@ -40,7 +42,10 @@ function ModeCard({
   return (
     <section className="xq-panel flex flex-col gap-3 p-4" data-testid={testId}>
       <div className="flex items-center gap-2">
-        <span className="xq-mono rounded px-2 py-0.5 text-[11px] xq-muted" style={{ border: '1px solid var(--xq-line)' }}>
+        <span
+          className="xq-mono rounded px-2 py-0.5 text-[11px] xq-muted"
+          style={{ border: '1px solid var(--xq-line)' }}
+        >
           {badge}
         </span>
         <h3 className="text-base font-semibold">{title}</h3>

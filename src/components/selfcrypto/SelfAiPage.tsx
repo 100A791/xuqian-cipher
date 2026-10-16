@@ -90,7 +90,13 @@ export function SelfAiPage() {
   return (
     <SelfShell title={t('sc.ai.title')} description={t('sc.ai.desc')}>
       <Field label={t('sc.ai.pick')}>
-        <input type="file" accept="image/*" className="xq-input" data-testid="sc-ai-input" onChange={(e) => void pick(e.target.files?.[0])} />
+        <input
+          type="file"
+          accept="image/*"
+          className="xq-input"
+          data-testid="sc-ai-input"
+          onChange={(e) => void pick(e.target.files?.[0])}
+        />
       </Field>
       <button type="button" className="xq-btn w-fit" data-testid="sc-ai-run" disabled={busy || !image} onClick={run}>
         {busy ? t('sc.working') : t('sc.ai.run')}

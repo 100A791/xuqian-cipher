@@ -140,7 +140,10 @@ await runner.test('读取 JPEG 元数据：EXIF 标签 + XMP + C2PA 都能识别
   assertEqual(meta.exif.Software, 'Adobe Firefly 1.0', 'Software')
   assertTrue(meta.hasXmp, '应发现 XMP')
   assertTrue(meta.hasC2pa, '应发现 C2PA')
-  assertTrue(meta.aiMarkers.includes('adobe firefly') || meta.aiMarkers.includes('firefly'), `AI 签名：${meta.aiMarkers}`)
+  assertTrue(
+    meta.aiMarkers.includes('adobe firefly') || meta.aiMarkers.includes('firefly'),
+    `AI 签名：${meta.aiMarkers}`,
+  )
 })
 
 await runner.test('读取 PNG 文本块并识别 AI 签名', () => {
@@ -207,7 +210,10 @@ function buildIsobmff(brand, payload) {
 }
 
 await runner.test('WebP：按 RIFF 块解析 EXIF 与 XMP', () => {
-  const webp = buildWebp({ exif: buildTiff(0x0131, 'Midjourney v6'), xmp: '<x:xmpmeta>CreatorTool="Adobe Firefly"</x:xmpmeta>' })
+  const webp = buildWebp({
+    exif: buildTiff(0x0131, 'Midjourney v6'),
+    xmp: '<x:xmpmeta>CreatorTool="Adobe Firefly"</x:xmpmeta>',
+  })
   assertTrue(readWebpChunks(webp) !== null, '应识别为 WebP')
   const meta = scanMetadata(webp)
   assertEqual(meta.format, 'webp', '格式')
@@ -215,7 +221,10 @@ await runner.test('WebP：按 RIFF 块解析 EXIF 与 XMP', () => {
   assertEqual(meta.exif.Software, 'Midjourney v6', 'Software 标签')
   assertTrue(meta.hasXmp, '应发现 XMP')
   assertTrue(meta.aiMarkers.includes('midjourney'), `AI 签名：${meta.aiMarkers}`)
-  assertTrue(meta.aiMarkers.includes('adobe firefly') || meta.aiMarkers.includes('firefly'), `AI 签名：${meta.aiMarkers}`)
+  assertTrue(
+    meta.aiMarkers.includes('adobe firefly') || meta.aiMarkers.includes('firefly'),
+    `AI 签名：${meta.aiMarkers}`,
+  )
 })
 
 await runner.test('WebP：EXIF 块里直接放 TIFF（无 Exif 前缀）也能解析', () => {
@@ -260,7 +269,12 @@ await runner.test('AVIF：标记扫描能找到 Exif 与 AI 签名', () => {
 await runner.test('HEIC：标记扫描 + C2PA 标记', () => {
   const heic = buildIsobmff(
     'heic',
-    concat(utf8('jumb'), utf8('c2pa manifest'), utf8('http://ns.adobe.com/xap/1.0/'), utf8('<x:xmpmeta>Midjourney</x:xmpmeta>')),
+    concat(
+      utf8('jumb'),
+      utf8('c2pa manifest'),
+      utf8('http://ns.adobe.com/xap/1.0/'),
+      utf8('<x:xmpmeta>Midjourney</x:xmpmeta>'),
+    ),
   )
   const meta = scanMetadata(heic)
   assertEqual(meta.format, 'heic', '格式')
@@ -345,7 +359,10 @@ await runner.test('频域：棋盘图高频占比显著高于平滑渐变图', (
   // 1 像素棋盘：能量落在 u=4（8×8 的奈奎斯特），属真正的高频
   const c = analyzeFrequency(checker(64, 64, 1))
   const g = analyzeFrequency(gradient(64, 64))
-  assertTrue(c.highFreqRatio > g.highFreqRatio + 0.3, `棋盘 ${c.highFreqRatio.toFixed(3)} vs 渐变 ${g.highFreqRatio.toFixed(3)}`)
+  assertTrue(
+    c.highFreqRatio > g.highFreqRatio + 0.3,
+    `棋盘 ${c.highFreqRatio.toFixed(3)} vs 渐变 ${g.highFreqRatio.toFixed(3)}`,
+  )
   assertTrue(c.blockCount > 0, '应统计到分块')
 })
 
@@ -382,7 +399,10 @@ await runner.test('LSB 异常：低位恒定的图被判为异常，低位随机
 await runner.test('噪声：平滑图残差强度低于棋盘图', () => {
   const smooth = analyzeNoise(gradient(64, 64))
   const busy = analyzeNoise(checker(64, 64, 1))
-  assertTrue(busy.residualStd > smooth.residualStd, `棋盘残差 ${busy.residualStd.toFixed(2)} 应 > 渐变 ${smooth.residualStd.toFixed(2)}`)
+  assertTrue(
+    busy.residualStd > smooth.residualStd,
+    `棋盘残差 ${busy.residualStd.toFixed(2)} 应 > 渐变 ${smooth.residualStd.toFixed(2)}`,
+  )
 })
 
 await runner.test('色彩：灰度图三通道相关系数为 1；随机彩图明显更低', () => {
@@ -397,7 +417,8 @@ await runner.test('色彩：灰度图三通道相关系数为 1；随机彩图�
   assertTrue(c.channelCorrelation < 0.9, `随机彩图相关性应明显低于 1，实际 ${c.channelCorrelation.toFixed(3)}`)
 })
 
-await runner.test('边缘：纯色无响应、阶跃响应集中、渐变响应弥散', () => {  const flat = analyzeEdge(createImage(48, 48, 128))
+await runner.test('边缘：纯色无响应、阶跃响应集中、渐变响应弥散', () => {
+  const flat = analyzeEdge(createImage(48, 48, 128))
   const step = analyzeEdge(stepEdge(48, 48))
   const ramp = analyzeEdge(gradient(48, 48))
 
@@ -540,8 +561,12 @@ await runner.test('径向功率谱与谱斜率：白噪声平缓、线性斜坡�
   const ramp = new Float64Array(n * n)
   for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) ramp[y * n + x] = x + y
 
-  const noiseSlope = estimateSpectralSlope(radialPowerSpectrum(fft2dMagnitude(prepareSquare(noise, n, n, n), n), n, 24)).slope
-  const rampSlope = estimateSpectralSlope(radialPowerSpectrum(fft2dMagnitude(prepareSquare(ramp, n, n, n), n), n, 24)).slope
+  const noiseSlope = estimateSpectralSlope(
+    radialPowerSpectrum(fft2dMagnitude(prepareSquare(noise, n, n, n), n), n, 24),
+  ).slope
+  const rampSlope = estimateSpectralSlope(
+    radialPowerSpectrum(fft2dMagnitude(prepareSquare(ramp, n, n, n), n), n, 24),
+  ).slope
   assertTrue(noiseSlope > -1, `白噪声斜率应接近 0，实际 ${noiseSlope.toFixed(2)}`)
   assertTrue(rampSlope < -1.2, `斜坡斜率应明显为负，实际 ${rampSlope.toFixed(2)}`)
   assertTrue(rampSlope < noiseSlope, '斜坡应比白噪声陡')
@@ -653,7 +678,13 @@ await runner.test('报告：权重合计为 1，各信号贡献之和等于总�
   assertTrue(Math.abs(sum - 1) < 1e-9, `权重合计应为 1，实际 ${sum}`)
   const report = buildReport({
     kind: 'test',
-    signals: { metadata: { score: 1 }, frequency: { score: 0 }, noise: { score: 0 }, color: { score: 0 }, edge: { score: 0 } },
+    signals: {
+      metadata: { score: 1 },
+      frequency: { score: 0 },
+      noise: { score: 0 },
+      color: { score: 0 },
+      edge: { score: 0 },
+    },
     measurements: {},
   })
   assertTrue(Math.abs(report.score - WEIGHTS.metadata) < 1e-9, '总分应等于 1×metadata 权重')
@@ -696,7 +727,13 @@ await runner.test('报告：verdict 按阈值分档（总分是加权和）', ()
 await runner.test('报告：分数始终夹在 [0,1]（越界的原始指标不会溢出）', () => {
   const report = buildReport({
     kind: 't',
-    signals: { metadata: { score: 5 }, frequency: { score: -3 }, noise: { score: 0 }, color: { score: 0 }, edge: { score: 0 } },
+    signals: {
+      metadata: { score: 5 },
+      frequency: { score: -3 },
+      noise: { score: 0 },
+      color: { score: 0 },
+      edge: { score: 0 },
+    },
     measurements: {},
   })
   assertTrue(report.score >= 0 && report.score <= 1, `分数应在 [0,1]，实际 ${report.score}`)
@@ -708,7 +745,10 @@ await runner.test('模块 E：带 AI 工具签名的图给出更高可能性，�
   const clean = detectAIGenerated(image, { fileBytes: buildJpeg({ exif: { Software: 'Nikon Transfer 2' } }) })
   assertTrue(withMark.score > clean.score, `带签名 ${withMark.score.toFixed(3)} 应 > 干净 ${clean.score.toFixed(3)}`)
   assertTrue(withMark.verdict !== 'low', `带签名不应是 low，实际 ${withMark.verdict}`)
-  assertTrue(withMark.evidence.some((e) => /firefly/i.test(e)), `证据里应提到 Firefly：${withMark.evidence}`)
+  assertTrue(
+    withMark.evidence.some((e) => /firefly/i.test(e)),
+    `证据里应提到 Firefly：${withMark.evidence}`,
+  )
   assertEqual(clean.calibrated, false, '干净图同样带未标定声明')
 })
 
@@ -725,7 +765,10 @@ await runner.test('模块 D：嵌入本项目水印的图能被检出，且证�
   const wmSignal = report.signals.find((s) => s.name === 'frequency')
   assertEqual(wmSignal.score, 1, '应直接读出本项目的 LSB 水印')
   assertTrue(report.watermark?.publicInfo === '版权归 XUQIAN 所有', '应取回公开水印文本')
-  assertTrue(report.evidence.some((e) => e.includes('版权归 XUQIAN')), `证据：${report.evidence}`)
+  assertTrue(
+    report.evidence.some((e) => e.includes('版权归 XUQIAN')),
+    `证据：${report.evidence}`,
+  )
   assertTrue(report.verdict !== 'low', '检出真实水印不应是 low')
 })
 

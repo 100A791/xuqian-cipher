@@ -115,7 +115,9 @@ export function embedWatermark(image, info = {}) {
 
   const publicBytes = info.publicInfo ? utf8Encode(info.publicInfo) : new Uint8Array(0)
   const keyWK = info.keyWK ? copyBytes(info.keyWK) : generateWatermarkKey()
-  const privatePacked = info.privateInfo ? encryptWatermarkPayload(utf8Encode(info.privateInfo), keyWK) : new Uint8Array(0)
+  const privatePacked = info.privateInfo
+    ? encryptWatermarkPayload(utf8Encode(info.privateInfo), keyWK)
+    : new Uint8Array(0)
 
   const header = {
     version: WM_VERSION,
@@ -210,5 +212,3 @@ export async function extractWatermark(image, keyWK) {
     return fail(`wm-private:${error?.code ?? 'unknown'}`)
   }
 }
-
-

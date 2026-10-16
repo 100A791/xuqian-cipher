@@ -51,7 +51,9 @@ for (const [label, file] of suites) {
 
 const failed = results.filter((r) => !r.ok)
 const spawnFailed = results.filter((r) => r.spawnFailed)
-console.log(`\n自研路线验收：${results.length - failed.length}/${results.length} 套通过（算法 5 + 阶段零 1 + 格式与加解密 2 + 水印 1 + AI 检测 1 + 存储与结构自检 1 + 阶段七四项 4）`)
+console.log(
+  `\n自研路线验收：${results.length - failed.length}/${results.length} 套通过（算法 5 + 阶段零 1 + 格式与加解密 2 + 水印 1 + AI 检测 1 + 存储与结构自检 1 + 阶段七四项 4）`,
+)
 if (failed.length > 0) {
   if (spawnFailed.length === results.length) {
     // 一套都没跑起来 → 环境问题，不是测试结果

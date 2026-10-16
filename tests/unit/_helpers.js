@@ -29,7 +29,9 @@ export function createRunner(title) {
     },
     finish() {
       const failed = results.filter((r) => !r.ok)
-      console.log(`\n${title}：合计 ${results.length} 项，通过 ${results.length - failed.length} 项，失败 ${failed.length} 项`)
+      console.log(
+        `\n${title}：合计 ${results.length} 项，通过 ${results.length - failed.length} 项，失败 ${failed.length} 项`,
+      )
       if (failed.length > 0) process.exitCode = 1
       return failed.length === 0
     },

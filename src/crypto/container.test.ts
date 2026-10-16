@@ -1,5 +1,16 @@
 import { describe, expect, it } from 'vitest'
-import { describeHeader, decryptContainer, encryptContainer, hasMagic, parseHeader, EXT_ENCRYPTED, encryptedFileName, originalFileName, HEADER_FIXED_LEN, HEADER_LEN_OFFSET } from './container.ts'
+import {
+  describeHeader,
+  decryptContainer,
+  encryptContainer,
+  hasMagic,
+  parseHeader,
+  EXT_ENCRYPTED,
+  encryptedFileName,
+  originalFileName,
+  HEADER_FIXED_LEN,
+  HEADER_LEN_OFFSET,
+} from './container.ts'
 import { MasterKey } from './keys.ts'
 import { bytesToBase64, hexToBytes, bytesToHex, concatBytes } from './encoding.ts'
 import type { AlgoId } from './aead.ts'
@@ -8,7 +19,10 @@ const te = new TextEncoder()
 
 async function roundTrip(plaintext: Uint8Array, layers: AlgoId[], key?: MasterKey) {
   const mk = key ?? MasterKey.generate()
-  const enc = await encryptContainer(plaintext, mk, { layers, meta: { n: 'a.bin', m: 'application/octet-stream', t: 1700000000000 } })
+  const enc = await encryptContainer(plaintext, mk, {
+    layers,
+    meta: { n: 'a.bin', m: 'application/octet-stream', t: 1700000000000 },
+  })
   const file = concatBytes(...enc.pieces)
   const dec = await decryptContainer(file, mk)
   return { mk, enc, file, dec }
@@ -56,7 +70,12 @@ describe('XUQIAN 容器格式', () => {
     const ten: AlgoId[] = Array.from({ length: 10 }, () => 'AES-128-GCM')
     const { dec } = await roundTrip(data, ten)
     expect(dec.plaintext.length).toBe(data.length)
-    await expect(roundTrip(data, Array.from({ length: 11 }, () => 'AES-128-GCM'))).rejects.toThrow(/LAYER_COUNT/)
+    await expect(
+      roundTrip(
+        data,
+        Array.from({ length: 11 }, () => 'AES-128-GCM'),
+      ),
+    ).rejects.toThrow(/LAYER_COUNT/)
   })
 
   it('错误密钥无法解密，且错误信息统一为 AUTH_FAILED', async () => {

@@ -10,7 +10,10 @@ export function Panel({ children, className = '' }: { children: ReactNode; class
 export function Label({ children, hint }: { children: ReactNode; hint?: ReactNode }) {
   return (
     <div className="mb-1 flex items-baseline justify-between gap-2">
-      <span className="shrink-0 whitespace-nowrap text-xs font-medium tracking-wide" style={{ color: 'var(--text-dim)' }}>
+      <span
+        className="shrink-0 whitespace-nowrap text-xs font-medium tracking-wide"
+        style={{ color: 'var(--text-dim)' }}
+      >
         {children}
       </span>
       {hint ? <span className="min-w-0 truncate text-right text-[11px] xq-muted">{hint}</span> : null}
@@ -27,7 +30,13 @@ export function Progress({ value, label }: { value: number; label?: string }) {
           <span className="xq-mono">{Math.round(value)}%</span>
         </div>
       ) : null}
-      <div className="xq-progress" role="progressbar" aria-valuenow={Math.round(value)} aria-valuemin={0} aria-valuemax={100}>
+      <div
+        className="xq-progress"
+        role="progressbar"
+        aria-valuenow={Math.round(value)}
+        aria-valuemin={0}
+        aria-valuemax={100}
+      >
         <span style={{ width: `${Math.max(0, Math.min(100, value))}%` }} />
       </div>
     </div>
@@ -45,10 +54,26 @@ export function Alert({
   children?: ReactNode
 } & Omit<HTMLAttributes<HTMLDivElement>, 'title'>) {
   const palette: Record<string, { border: string; bg: string; color: string }> = {
-    info: { border: 'var(--panel-border)', bg: 'color-mix(in srgb, var(--panel) 60%, transparent)', color: 'var(--text)' },
-    warn: { border: 'color-mix(in srgb, var(--accent) 60%, transparent)', bg: 'color-mix(in srgb, var(--accent) 12%, transparent)', color: 'var(--text)' },
-    danger: { border: 'color-mix(in srgb, var(--seal) 70%, transparent)', bg: 'color-mix(in srgb, var(--seal) 16%, transparent)', color: 'var(--text)' },
-    ok: { border: 'color-mix(in srgb, var(--jade) 60%, transparent)', bg: 'color-mix(in srgb, var(--jade) 12%, transparent)', color: 'var(--text)' },
+    info: {
+      border: 'var(--panel-border)',
+      bg: 'color-mix(in srgb, var(--panel) 60%, transparent)',
+      color: 'var(--text)',
+    },
+    warn: {
+      border: 'color-mix(in srgb, var(--accent) 60%, transparent)',
+      bg: 'color-mix(in srgb, var(--accent) 12%, transparent)',
+      color: 'var(--text)',
+    },
+    danger: {
+      border: 'color-mix(in srgb, var(--seal) 70%, transparent)',
+      bg: 'color-mix(in srgb, var(--seal) 16%, transparent)',
+      color: 'var(--text)',
+    },
+    ok: {
+      border: 'color-mix(in srgb, var(--jade) 60%, transparent)',
+      bg: 'color-mix(in srgb, var(--jade) 12%, transparent)',
+      color: 'var(--text)',
+    },
   }
   const toneStyle = palette[tone]
   return (
@@ -180,7 +205,10 @@ export function Field({ label, hint, children }: { label: ReactNode; hint?: Reac
   return (
     <label className="block">
       <span className="mb-1 flex items-baseline justify-between gap-2">
-        <span className="shrink-0 whitespace-nowrap text-xs font-medium tracking-wide" style={{ color: 'var(--text-dim)' }}>
+        <span
+          className="shrink-0 whitespace-nowrap text-xs font-medium tracking-wide"
+          style={{ color: 'var(--text-dim)' }}
+        >
           {label}
         </span>
         {hint ? <span className="min-w-0 truncate text-right text-[11px] xq-muted">{hint}</span> : null}

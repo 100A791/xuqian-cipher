@@ -11,7 +11,15 @@
  */
 import { decryptContainer, encryptContainer, type XuqianMeta } from '../crypto/container.ts'
 import { bufferSource, keyCheck } from '../crypto/stream.ts'
-import { buildPreamble, defaultBanner, normalizeBannerText, noticeExpectation, noticeHash, readPreamble, stripBanner } from '../crypto/banner.ts'
+import {
+  buildPreamble,
+  defaultBanner,
+  normalizeBannerText,
+  noticeExpectation,
+  noticeHash,
+  readPreamble,
+  stripBanner,
+} from '../crypto/banner.ts'
 import type { AlgoId } from '../crypto/aead.ts'
 import { MasterKey } from '../crypto/keys.ts'
 import { base64ToBytes, bytesToBase64, bytesToHex, concatBytes, hexToBytes } from '../crypto/encoding.ts'
@@ -135,7 +143,12 @@ function destroyKey(): void {
 async function viewOf(key: MasterKey): Promise<KeyView> {
   const bytes = key.clone()
   try {
-    return { hex: bytesToHex(bytes), base64: bytesToBase64(bytes), fingerprint: await key.fingerprint(), bytes: bytes.length }
+    return {
+      hex: bytesToHex(bytes),
+      base64: bytesToBase64(bytes),
+      fingerprint: await key.fingerprint(),
+      bytes: bytes.length,
+    }
   } finally {
     zeroize(bytes)
   }
@@ -158,7 +171,8 @@ function normalizeError(error: unknown): string {
     case 'CSPRNG_UNAVAILABLE':
       return message
     default:
-      if (/^(HEADER_|MAGIC_|BODY_|TAG_|CHUNK_|FORMAT_|PLAINTEXT_|META_|SALT_|NONCE_)/.test(message)) return 'FORMAT_INVALID'
+      if (/^(HEADER_|MAGIC_|BODY_|TAG_|CHUNK_|FORMAT_|PLAINTEXT_|META_|SALT_|NONCE_)/.test(message))
+        return 'FORMAT_INVALID'
       return 'UNKNOWN'
   }
 }

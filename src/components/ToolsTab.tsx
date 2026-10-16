@@ -6,7 +6,13 @@ import { cryptoClient } from '../worker/client.ts'
 import { combineShares, decodeShare, type ShamirShare } from '../crypto/shamir.ts'
 import { bytesToHex } from '../crypto/encoding.ts'
 import { MasterKey } from '../crypto/keys.ts'
-import { buildPlainKeyFile, buildProtectedKeyFile, parseKeyFile, payloadFromBytes, serializeKeyFile } from '../crypto/keyfile.ts'
+import {
+  buildPlainKeyFile,
+  buildProtectedKeyFile,
+  parseKeyFile,
+  payloadFromBytes,
+  serializeKeyFile,
+} from '../crypto/keyfile.ts'
 import { errorMessageKey } from '../app/i18n.ts'
 import { describeHeader, parseHeader, EXT_KEYFILE, type XuqianHeader } from '../crypto/container.ts'
 import { Alert, Field, Panel } from './ui.tsx'
@@ -21,8 +27,6 @@ function randomFrom(chars: string, length: number): string {
   for (let i = 0; i < length; i++) out += chars[bytes[i] % chars.length]
   return out
 }
-
-
 
 export function ToolsTab() {
   const t = useApp((s) => s.t)
@@ -70,9 +74,12 @@ export function ToolsTab() {
     }
     setError(null)
     // 每个必选类别至少出现一次，其余随机补齐
-    const required = [useLower && 'abcdefghijkmnopqrstuvwxyz', useUpper && 'ABCDEFGHJKLMNPQRSTUVWXYZ', useDigits && '23456789', useSymbols && SYMBOLS].filter(
-      (item): item is string => typeof item === 'string',
-    )
+    const required = [
+      useLower && 'abcdefghijkmnopqrstuvwxyz',
+      useUpper && 'ABCDEFGHJKLMNPQRSTUVWXYZ',
+      useDigits && '23456789',
+      useSymbols && SYMBOLS,
+    ].filter((item): item is string => typeof item === 'string')
     let candidate = required.map((set) => randomFrom(set, 1)).join('')
     candidate += randomFrom(pool, Math.max(0, length - candidate.length))
     const chars = candidate.split('')
@@ -313,7 +320,12 @@ export function ToolsTab() {
             onChange={(event) => setShareText(event.target.value)}
           />
         </Field>
-        <button type="button" className="xq-btn xq-btn-primary" disabled={!shareText.trim()} onClick={() => void recoverFromShares()}>
+        <button
+          type="button"
+          className="xq-btn xq-btn-primary"
+          disabled={!shareText.trim()}
+          onClick={() => void recoverFromShares()}
+        >
           {t('tools.shamirRecover')}
         </button>
         {recovered ? (
@@ -323,7 +335,9 @@ export function ToolsTab() {
             <div className="text-[11px]">
               {t('key.fingerprint')}：{recovered.fingerprint}
             </div>
-            <div className="mt-1 text-[11px] xq-muted">已同时下载 .XUQIANKEY 文件。恢复出的密钥请立即另存并妥善保管。</div>
+            <div className="mt-1 text-[11px] xq-muted">
+              已同时下载 .XUQIANKEY 文件。恢复出的密钥请立即另存并妥善保管。
+            </div>
           </Alert>
         ) : null}
         {error ? <Alert tone="danger">{error}</Alert> : null}
@@ -373,7 +387,12 @@ export function ToolsTab() {
             onChange={(event) => setRotateNewPw2(event.target.value)}
           />
         </Field>
-        <button type="button" className="xq-btn xq-btn-primary w-full" disabled={busy || !rotateFile} onClick={() => void rotateKeyFile()}>
+        <button
+          type="button"
+          className="xq-btn xq-btn-primary w-full"
+          disabled={busy || !rotateFile}
+          onClick={() => void rotateKeyFile()}
+        >
           {t('tools.rotate.run')}
         </button>
         {rotateDone ? <Alert tone="ok">{rotateDone}</Alert> : null}
@@ -452,7 +471,14 @@ export function ToolsTab() {
                 <span className="xq-mono xq-muted shrink-0">{formatTS(entry.ts).slice(11)}</span>
                 <span
                   className="xq-chip shrink-0"
-                  style={{ color: entry.level === 'error' ? 'var(--seal-bright)' : entry.level === 'warn' ? 'var(--accent)' : 'var(--text-dim)' }}
+                  style={{
+                    color:
+                      entry.level === 'error'
+                        ? 'var(--seal-bright)'
+                        : entry.level === 'warn'
+                          ? 'var(--accent)'
+                          : 'var(--text-dim)',
+                  }}
                 >
                   {entry.action}
                 </span>
@@ -461,7 +487,9 @@ export function ToolsTab() {
             ))}
           </ul>
         )}
-        <div className="text-[11px] xq-muted">日志只保存在本机 localStorage，且写入前会过滤疑似密钥内容，不会上传。</div>
+        <div className="text-[11px] xq-muted">
+          日志只保存在本机 localStorage，且写入前会过滤疑似密钥内容，不会上传。
+        </div>
       </Panel>
     </div>
   )

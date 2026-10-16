@@ -12,7 +12,8 @@
 import { VISIBLE_FONT_WIDTH_RATIO, VISIBLE_MARGIN_PX, VISIBLE_OPACITY } from '../common/constants.js'
 
 /** 默认字体栈：只用系统字体，不内嵌字体文件（决策 D17：避免体积与授权问题）。 */
-export const DEFAULT_FONT_STACK = '"Microsoft YaHei", "PingFang SC", "Source Han Sans SC", "Noto Sans CJK SC", Arial, sans-serif'
+export const DEFAULT_FONT_STACK =
+  '"Microsoft YaHei", "PingFang SC", "Source Han Sans SC", "Noto Sans CJK SC", Arial, sans-serif'
 
 /**
  * 有形水印的样式（模式）。做成**可扩展的 mode**而不是硬编码两种：
@@ -77,8 +78,10 @@ export function computeVisibleWatermarkStyle(image, options = {}) {
 /** SPEC §6 阶段三验收：这些取值必须落在 SPEC 声明区间内。 */
 export function assertStyleWithinSpec(style) {
   const problems = []
-  if (!inRange(style.opacity, VISIBLE_OPACITY)) problems.push(`透明度 ${style.opacity} 不在 ${VISIBLE_OPACITY.join('~')}`)
-  if (!inRange(style.margin, VISIBLE_MARGIN_PX)) problems.push(`边距 ${style.margin} 不在 ${VISIBLE_MARGIN_PX.join('~')}`)
+  if (!inRange(style.opacity, VISIBLE_OPACITY))
+    problems.push(`透明度 ${style.opacity} 不在 ${VISIBLE_OPACITY.join('~')}`)
+  if (!inRange(style.margin, VISIBLE_MARGIN_PX))
+    problems.push(`边距 ${style.margin} 不在 ${VISIBLE_MARGIN_PX.join('~')}`)
   const ratio = style.fontSize / style.width
   if (!inRange(ratio, VISIBLE_FONT_WIDTH_RATIO)) {
     problems.push(`字号占比 ${ratio.toFixed(4)} 不在 ${VISIBLE_FONT_WIDTH_RATIO.join('~')}`)

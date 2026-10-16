@@ -26,7 +26,12 @@ for (const testCase of vectors.cases) {
 await runner.test('S-box 由数学定义生成，抽检已知值', () => {
   // 抽检几个教科书上公认的 S-box 取值（生成错误时这些点会立刻暴露）
   const checkpoints = [
-    [0x00, 0x63], [0x01, 0x7c], [0x53, 0xed], [0x10, 0xca], [0xff, 0x16], [0x80, 0xcd],
+    [0x00, 0x63],
+    [0x01, 0x7c],
+    [0x53, 0xed],
+    [0x10, 0xca],
+    [0xff, 0x16],
+    [0x80, 0xcd],
   ]
   for (const [input, expected] of checkpoints) {
     assertEqual(SBOX[input], expected, `SBOX[0x${input.toString(16)}]`)

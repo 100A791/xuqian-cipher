@@ -21,7 +21,10 @@ import { runDecrypt, type ProgressEvent, type RunHandle } from './selfWorkerClie
 import { SelfShell } from './SelfShell.tsx'
 
 const fromHex = (text: string) => {
-  const clean = text.trim().toLowerCase().replace(/[^0-9a-f]/g, '')
+  const clean = text
+    .trim()
+    .toLowerCase()
+    .replace(/[^0-9a-f]/g, '')
   if (clean.length !== 32) return null
   const out = new Uint8Array(16)
   for (let i = 0; i < 16; i++) out[i] = parseInt(clean.slice(i * 2, i * 2 + 2), 16)
@@ -47,7 +50,14 @@ export function SelfDecryptPage() {
   const [phase, setPhase] = useState<ProgressEvent | null>(null)
   const [percent, setPercent] = useState(0)
   const [backupMessage, setBackupMessage] = useState<string | null>(null)
-  const [usage, setUsage] = useState<{ records: number; bytes: number; usage: number | null; quota: number | null; ratio: number | null; nearQuota: boolean } | null>(null)
+  const [usage, setUsage] = useState<{
+    records: number
+    bytes: number
+    usage: number | null
+    quota: number | null
+    ratio: number | null
+    nearQuota: boolean
+  } | null>(null)
   const handleRef = useRef<RunHandle<{ plainBytes: Uint8Array; metadata: Map<string, unknown> }> | null>(null)
 
   const refreshLibrary = async () => {
@@ -194,14 +204,24 @@ export function SelfDecryptPage() {
   return (
     <SelfShell title={t('sc.decrypt.title')} description={t('sc.decrypt.desc')}>
       <Field label={t('sc.decrypt.pick')}>
-        <input type="file" className="xq-input" data-testid="sc-decrypt-input" onChange={(e) => void pickFile(e.target.files?.[0])} />
+        <input
+          type="file"
+          className="xq-input"
+          data-testid="sc-decrypt-input"
+          onChange={(e) => void pickFile(e.target.files?.[0])}
+        />
       </Field>
 
       {libraryReady ? (
         <div className="flex flex-col gap-2" data-testid="sc-decrypt-library">
           <div className="flex items-center justify-between">
             <span className="text-[12px] font-semibold">{t('sc.decrypt.library')}</span>
-            <button type="button" className="xq-btn" data-testid="sc-decrypt-lib-refresh" onClick={() => void refreshLibrary()}>
+            <button
+              type="button"
+              className="xq-btn"
+              data-testid="sc-decrypt-lib-refresh"
+              onClick={() => void refreshLibrary()}
+            >
               {t('sc.decrypt.refresh')}
             </button>
           </div>
@@ -212,14 +232,28 @@ export function SelfDecryptPage() {
           ) : (
             <ul className="flex flex-col gap-1">
               {library.map((item) => (
-                <li key={item.id} className="flex flex-wrap items-center gap-2 text-[11px]" data-testid="sc-decrypt-lib-item">
+                <li
+                  key={item.id}
+                  className="flex flex-wrap items-center gap-2 text-[11px]"
+                  data-testid="sc-decrypt-lib-item"
+                >
                   <span className="xq-mono">{item.name}</span>
                   <span className="xq-muted">{item.size} B</span>
                   <span className="xq-muted">{new Date(item.savedAt).toLocaleString()}</span>
-                  <button type="button" className="xq-btn" data-testid="sc-decrypt-lib-use" onClick={() => void pickFromLibrary(item)}>
+                  <button
+                    type="button"
+                    className="xq-btn"
+                    data-testid="sc-decrypt-lib-use"
+                    onClick={() => void pickFromLibrary(item)}
+                  >
                     {t('sc.decrypt.use')}
                   </button>
-                  <button type="button" className="xq-btn" data-testid="sc-decrypt-lib-delete" onClick={() => void removeFromLibrary(item)}>
+                  <button
+                    type="button"
+                    className="xq-btn"
+                    data-testid="sc-decrypt-lib-delete"
+                    onClick={() => void removeFromLibrary(item)}
+                  >
                     {t('sc.decrypt.delete')}
                   </button>
                 </li>
@@ -242,7 +276,12 @@ export function SelfDecryptPage() {
           ) : null}
           {usage?.nearQuota ? <Alert tone="warn">{t('sc.decrypt.quotaWarn')}</Alert> : null}
           <div className="flex flex-wrap items-center gap-2">
-            <button type="button" className="xq-btn" data-testid="sc-decrypt-lib-export" onClick={() => void runExport()}>
+            <button
+              type="button"
+              className="xq-btn"
+              data-testid="sc-decrypt-lib-export"
+              onClick={() => void runExport()}
+            >
               {t('sc.decrypt.exportLib')}
             </button>
             <label className="xq-btn" style={{ cursor: 'pointer' }}>
@@ -277,7 +316,11 @@ export function SelfDecryptPage() {
       </Field>
 
       {source ? (
-        <Stat label={t('sc.decrypt.source')} value={`${source.name}（${source.from === 'library' ? t('sc.decrypt.fromLibrary') : t('sc.decrypt.fromFile')}）`} mono />
+        <Stat
+          label={t('sc.decrypt.source')}
+          value={`${source.name}（${source.from === 'library' ? t('sc.decrypt.fromLibrary') : t('sc.decrypt.fromFile')}）`}
+          mono
+        />
       ) : null}
 
       <div className="flex flex-wrap gap-2">
@@ -305,7 +348,9 @@ export function SelfDecryptPage() {
 
       {error ? <Alert tone="danger">{error}</Alert> : null}
       {result && result.name === '' ? (
-        <Alert tone={result.keyOk ? 'info' : 'danger'}>{result.keyOk ? t('sc.decrypt.keyOk') : t('sc.decrypt.keyBad')}</Alert>
+        <Alert tone={result.keyOk ? 'info' : 'danger'}>
+          {result.keyOk ? t('sc.decrypt.keyOk') : t('sc.decrypt.keyBad')}
+        </Alert>
       ) : null}
       {result?.name ? (
         <div className="grid gap-2 sm:grid-cols-2" data-testid="sc-decrypt-result">

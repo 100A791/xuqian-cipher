@@ -290,7 +290,11 @@ export function KeyModal() {
               <div className="space-y-3">
                 <div className="xq-card space-y-2 p-3">
                   <label className="flex items-center gap-2 text-xs">
-                    <input type="checkbox" checked={usePassword} onChange={(event) => setUsePassword(event.target.checked)} />
+                    <input
+                      type="checkbox"
+                      checked={usePassword}
+                      onChange={(event) => setUsePassword(event.target.checked)}
+                    />
                     {t('key.protect')}
                   </label>
                   {usePassword ? (
@@ -319,7 +323,12 @@ export function KeyModal() {
                       </p>
                     </div>
                   ) : null}
-                  <button type="button" className="xq-btn xq-btn-primary w-full" disabled={busy} onClick={() => void downloadKeyFile()}>
+                  <button
+                    type="button"
+                    className="xq-btn xq-btn-primary w-full"
+                    disabled={busy}
+                    onClick={() => void downloadKeyFile()}
+                  >
                     {modal.downloaded ? `✓ ${t('key.downloaded')}` : t('key.download')}
                   </button>
                 </div>
@@ -352,12 +361,20 @@ export function KeyModal() {
                     <button type="button" className="xq-btn text-[11px]" onClick={generateShares}>
                       {t('key.shamirGenerate')}
                     </button>
-                    <button type="button" className="xq-btn text-[11px]" disabled={shares.length === 0} onClick={downloadShares}>
+                    <button
+                      type="button"
+                      className="xq-btn text-[11px]"
+                      disabled={shares.length === 0}
+                      onClick={downloadShares}
+                    >
                       {t('key.shamirDownload')}
                     </button>
                   </div>
                   {shares.length > 0 ? (
-                    <div className="max-h-28 space-y-1 overflow-y-auto rounded-md p-2 text-[10px] xq-mono" style={{ background: 'color-mix(in srgb, var(--bg) 60%, transparent)' }}>
+                    <div
+                      className="max-h-28 space-y-1 overflow-y-auto rounded-md p-2 text-[10px] xq-mono"
+                      style={{ background: 'color-mix(in srgb, var(--bg) 60%, transparent)' }}
+                    >
                       {shares.map((share) => (
                         <div key={share} className="break-all">
                           {share}
@@ -385,12 +402,10 @@ export function KeyModal() {
         <footer className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
           <div className="flex flex-1 flex-wrap items-center gap-x-3 gap-y-1 text-[11px] xq-muted">
             <span>
-              {t('key.copyHex')}：
-              {copied ? `✓ ${t('key.copied')}` : t('key.notCopied')}
+              {t('key.copyHex')}：{copied ? `✓ ${t('key.copied')}` : t('key.notCopied')}
             </span>
             <span>
-              {EXT_KEYFILE}：
-              {modal.downloaded ? `✓ ${t('key.downloaded')}` : t('key.notCopied')}
+              {EXT_KEYFILE}：{modal.downloaded ? `✓ ${t('key.downloaded')}` : t('key.notCopied')}
             </span>
           </div>
           <button type="button" className="xq-btn xq-btn-primary" onClick={requestClose}>
@@ -399,7 +414,10 @@ export function KeyModal() {
         </footer>
 
         {confirming ? (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" style={{ background: 'rgba(3, 5, 10, 0.8)' }}>
+          <div
+            className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+            style={{ background: 'rgba(3, 5, 10, 0.8)' }}
+          >
             <div className="xq-panel xq-danger-panel max-w-md p-4">
               <h3 className="text-sm font-semibold" style={{ color: 'var(--seal-bright)' }}>
                 {t('key.confirmTitle')}

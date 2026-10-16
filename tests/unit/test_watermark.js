@@ -3,7 +3,14 @@
  *   「图片嵌入水印后肉眼正常 / 公开提取无需密钥可读 / 私有提取需要 WK 可读 / 错误 WK 统一失败」
  * 运行：node tests/unit/test_watermark.js
  */
-import { createImage, deriveStep, planSlots, slotCapacity, slotToOffset, streamBytes } from '../../src/selfcrypto/watermark/lsb.js'
+import {
+  createImage,
+  deriveStep,
+  planSlots,
+  slotCapacity,
+  slotToOffset,
+  streamBytes,
+} from '../../src/selfcrypto/watermark/lsb.js'
 import {
   PUBLIC_HEADER_SEED,
   buildPublicHeader,
@@ -57,7 +64,12 @@ function channelDelta(before, after) {
 // ------------------------------------------------------------------ LSB 基础
 
 await runner.test('位置序列：step 与槽位数互质（保证序列不重复）', () => {
-  for (const [w, h] of [[7, 5], [16, 16], [100, 1], [3, 3]]) {
+  for (const [w, h] of [
+    [7, 5],
+    [16, 16],
+    [100, 1],
+    [3, 3],
+  ]) {
     const image = createImage(w, h)
     const N = slotCapacity(image)
     const seed = streamBytes(utf8('seed'), 'k', 32)
@@ -73,7 +85,10 @@ await runner.test('位置序列：前 need 项互不重复', () => {
   const slots = planSlots({ image, seed, byteLen: 500 })
   assertEqual(slots.length, (500 + 4) * 8, '槽位数 = (长度+4)×8')
   assertEqual(new Set(slots).size, slots.length, '不得重复')
-  assertTrue(slots.every((s) => s >= 0 && s < N), '槽位在范围内')
+  assertTrue(
+    slots.every((s) => s >= 0 && s < N),
+    '槽位在范围内',
+  )
   assertTrue(slots.length <= N, '不得超过总容量')
 })
 
@@ -254,15 +269,30 @@ await runner.test('未嵌入水印的图 → 报 WM_ABSENT（属"没有水印"�
 
 await runner.test('公开层与私有层位置互不重叠', async () => {
   const image = photoLike()
-  const { outputImage, keyWK } = embedWatermark(image, { publicInfo: '公开信息' + 'x'.repeat(20), privateInfo: '私有信息' + 'y'.repeat(20) })
+  const { outputImage, keyWK } = embedWatermark(image, {
+    publicInfo: '公开信息' + 'x'.repeat(20),
+    privateInfo: '私有信息' + 'y'.repeat(20),
+  })
   // 通过公开头反推两层槽位
   const { planSlots } = await import('../../src/selfcrypto/watermark/lsb.js')
   const { derivePrivateSeed } = await import('../../src/selfcrypto/watermark/lsb.js')
-  const headerSlots = planSlots({ image: outputImage, seed: PUBLIC_HEADER_SEED, byteLen: 80, framing: false, label: 'wm/hdr' })
+  const headerSlots = planSlots({
+    image: outputImage,
+    seed: PUBLIC_HEADER_SEED,
+    byteLen: 80,
+    framing: false,
+    label: 'wm/hdr',
+  })
   const { readBytesAtSlots } = await import('../../src/selfcrypto/watermark/lsb.js')
   const headerBytes = readBytesAtSlots(outputImage, headerSlots, 80)
   const header = parsePublicHeader(headerBytes)
-  const pubSlots = planSlots({ image: outputImage, seed: header.publicSeed, byteLen: header.publicInfoLen, skip: new Set(headerSlots), label: 'wm/pub' })
+  const pubSlots = planSlots({
+    image: outputImage,
+    seed: header.publicSeed,
+    byteLen: header.publicInfoLen,
+    skip: new Set(headerSlots),
+    label: 'wm/pub',
+  })
   const privSlots = planSlots({
     image: outputImage,
     seed: derivePrivateSeed(keyWK, headerBytes),
@@ -271,8 +301,14 @@ await runner.test('公开层与私有层位置互不重叠', async () => {
     label: 'wm/priv',
   })
   const pubSet = new Set(pubSlots)
-  assertTrue(privSlots.every((s) => !pubSet.has(s)), '私有层不得用到公开层槽位')
-  assertTrue(privSlots.every((s) => !new Set(headerSlots).has(s)), '私有层不得用到公开头槽位')
+  assertTrue(
+    privSlots.every((s) => !pubSet.has(s)),
+    '私有层不得用到公开层槽位',
+  )
+  assertTrue(
+    privSlots.every((s) => !new Set(headerSlots).has(s)),
+    '私有层不得用到公开头槽位',
+  )
 })
 
 await runner.test('容量不足的公开信息 → 明确报错', () => {
@@ -285,7 +321,6 @@ await runner.test('容量不足的公开信息 → 明确报错', () => {
   }
   assertEqual(code, 'WM_CAPACITY_EXCEEDED', '容量错误码')
 })
-
 
 // ------------------------------------------------------------ 有形水印（纯函数部分）
 
@@ -342,29 +377,62 @@ await runner.test('有形水印绘制：用假的 Canvas 上下文验证调用�
     },
     fillText: (text, x, y) => calls.push(`fill:${text}@${x},${y}`),
     strokeText: (text, x, y) => calls.push(`stroke:${text}@${x},${y}`),
-    set font(v) { calls.push(`font:${v.includes('px') ? 'ok' : 'bad'}`) },
-    get font() { return '' },
-    set globalAlpha(v) { calls.push(`alpha:${v}`) },
-    get globalAlpha() { return 1 },
-    set textBaseline(v) { calls.push(`baseline:${v}`) },
-    get textBaseline() { return 'alphabetic' },
-    set fillStyle(v) { calls.push(`fillStyle:${v}`) },
-    get fillStyle() { return '' },
-    set strokeStyle(v) { calls.push(`strokeStyle:${v}`) },
-    get strokeStyle() { return '' },
-    set lineWidth(v) { calls.push(`lineWidth:${v}`) },
-    get lineWidth() { return 1 },
+    set font(v) {
+      calls.push(`font:${v.includes('px') ? 'ok' : 'bad'}`)
+    },
+    get font() {
+      return ''
+    },
+    set globalAlpha(v) {
+      calls.push(`alpha:${v}`)
+    },
+    get globalAlpha() {
+      return 1
+    },
+    set textBaseline(v) {
+      calls.push(`baseline:${v}`)
+    },
+    get textBaseline() {
+      return 'alphabetic'
+    },
+    set fillStyle(v) {
+      calls.push(`fillStyle:${v}`)
+    },
+    get fillStyle() {
+      return ''
+    },
+    set strokeStyle(v) {
+      calls.push(`strokeStyle:${v}`)
+    },
+    get strokeStyle() {
+      return ''
+    },
+    set lineWidth(v) {
+      calls.push(`lineWidth:${v}`)
+    },
+    get lineWidth() {
+      return 1
+    },
   }
   const style = drawVisibleWatermark(ctx, { width: 1000, height: 800 }, { text: 'XUQIAN' })
   assertTrue(calls.includes('save') && calls.includes('restore'), '必须成对 save/restore')
-  assertTrue(calls.some((c) => c.startsWith('fill:XUQIAN@')), '应绘制文字')
-  assertTrue(calls.some((c) => c === `alpha:${style.opacity}`), '应设置低透明度')
+  assertTrue(
+    calls.some((c) => c.startsWith('fill:XUQIAN@')),
+    '应绘制文字',
+  )
+  assertTrue(
+    calls.some((c) => c === `alpha:${style.opacity}`),
+    '应设置低透明度',
+  )
   assertTrue(style.text === 'XUQIAN', '返回实际使用的样式')
 })
 /** 一个够用的假 Canvas 上下文：记录所有绘制调用。 */
 function fakeCtx() {
   const calls = []
-  const record = (name) => (...args) => calls.push({ name, args })
+  const record =
+    (name) =>
+    (...args) =>
+      calls.push({ name, args })
   return {
     calls,
     save: record('save'),
@@ -377,20 +445,48 @@ function fakeCtx() {
     },
     fillText: record('fillText'),
     strokeText: record('strokeText'),
-    set font(v) { calls.push({ name: 'font', args: [v] }) },
-    get font() { return '' },
-    set globalAlpha(v) { calls.push({ name: 'globalAlpha', args: [v] }) },
-    get globalAlpha() { return 1 },
-    set textBaseline(v) { calls.push({ name: 'textBaseline', args: [v] }) },
-    get textBaseline() { return '' },
-    set textAlign(v) { calls.push({ name: 'textAlign', args: [v] }) },
-    get textAlign() { return '' },
-    set fillStyle(v) { calls.push({ name: 'fillStyle', args: [v] }) },
-    get fillStyle() { return '' },
-    set strokeStyle(v) { calls.push({ name: 'strokeStyle', args: [v] }) },
-    get strokeStyle() { return '' },
-    set lineWidth(v) { calls.push({ name: 'lineWidth', args: [v] }) },
-    get lineWidth() { return 1 },
+    set font(v) {
+      calls.push({ name: 'font', args: [v] })
+    },
+    get font() {
+      return ''
+    },
+    set globalAlpha(v) {
+      calls.push({ name: 'globalAlpha', args: [v] })
+    },
+    get globalAlpha() {
+      return 1
+    },
+    set textBaseline(v) {
+      calls.push({ name: 'textBaseline', args: [v] })
+    },
+    get textBaseline() {
+      return ''
+    },
+    set textAlign(v) {
+      calls.push({ name: 'textAlign', args: [v] })
+    },
+    get textAlign() {
+      return ''
+    },
+    set fillStyle(v) {
+      calls.push({ name: 'fillStyle', args: [v] })
+    },
+    get fillStyle() {
+      return ''
+    },
+    set strokeStyle(v) {
+      calls.push({ name: 'strokeStyle', args: [v] })
+    },
+    get strokeStyle() {
+      return ''
+    },
+    set lineWidth(v) {
+      calls.push({ name: 'lineWidth', args: [v] })
+    },
+    get lineWidth() {
+      return 1
+    },
   }
 }
 
@@ -434,8 +530,14 @@ await runner.test('平铺：绘制会旋转坐标系，并画出 条数×2 次�
   assertEqual(rotates.length, 1, '应旋转一次坐标系')
   assertTrue(Math.abs(rotates[0].args[0] - (-30 * Math.PI) / 180) < 1e-9, '旋转角应为 -30°')
   assertEqual(fills.length, counts.total, `填充次数应等于条数 ${counts.total}`)
-  assertTrue(ctx.calls.some((c) => c.name === 'translate'), '应先平移到中心')
-  assertTrue(ctx.calls[0].name === 'save' && ctx.calls[ctx.calls.length - 1].name === 'restore', 'save/restore 必须成对')
+  assertTrue(
+    ctx.calls.some((c) => c.name === 'translate'),
+    '应先平移到中心',
+  )
+  assertTrue(
+    ctx.calls[0].name === 'save' && ctx.calls[ctx.calls.length - 1].name === 'restore',
+    'save/restore 必须成对',
+  )
 })
 
 await runner.test('平铺：绘制坐标铺满旋转后的外接圆（不是只在角落）', () => {

@@ -50,7 +50,14 @@ import {
   payloadFromBytes,
   serializeKeyFile,
 } from '../src/crypto/keyfile.ts'
-import { ByteQueue, decryptStream, encryptStream, keyCheck, type ByteSink, type ByteSource } from '../src/crypto/stream.ts'
+import {
+  ByteQueue,
+  decryptStream,
+  encryptStream,
+  keyCheck,
+  type ByteSink,
+  type ByteSource,
+} from '../src/crypto/stream.ts'
 import {
   bannerSkippingSink,
   buildPreamble,
@@ -244,8 +251,7 @@ export async function resolveMasterKey(values) {
 
   if (values.keyfile) {
     const text = await readFile(values.keyfile, 'utf8')
-    const password =
-      values['keyfile-password'] ?? (values.password ? await promptSecret('密钥文件密码: ') : undefined)
+    const password = values['keyfile-password'] ?? (values.password ? await promptSecret('密钥文件密码: ') : undefined)
     const payload = await parseKeyFile(text, password || undefined)
     return masterKeyFromPayload(payload)
   }
@@ -476,34 +482,35 @@ export async function cmdEncrypt(values, inputs) {
       const writer = fileSink(targetPath)
       info(`加密 ${displayName} → ${basename(targetPath)}`)
       try {
-        const result = await encryptStream(
-          fileSource(containerPath),
-          preambleFirstSink(preamble, writer.sink),
-          key,
-          {
-            layers,
-            plaintextLength,
-            chunkSize,
-            gzip: useGzip,
-            encryptMeta: values['encrypt-meta'] === true,
-            timestampSalt: values['timestamp-salt'] === true,
-            meta: {
-              // 声明信息排最前（meta 键顺序会进 AAD，勿随意调整）
-              nl: banner.bytes.length,
-              nh: noticeHash(banner.bytes),
-              n: displayName,
-              s: plaintextLength,
-              t: Date.now(),
-              k: 'bytes',
-              ...(useGzip ? { os: sourceSize } : {}),
-              ...(values.note ? { c: values.note } : {}),
-              ...(expiresAt ? { exp: expiresAt } : {}),
-            },
-            onProgress: makeProgress(basename(targetPath), values.quiet),
+        const result = await encryptStream(fileSource(containerPath), preambleFirstSink(preamble, writer.sink), key, {
+          layers,
+          plaintextLength,
+          chunkSize,
+          gzip: useGzip,
+          encryptMeta: values['encrypt-meta'] === true,
+          timestampSalt: values['timestamp-salt'] === true,
+          meta: {
+            // 声明信息排最前（meta 键顺序会进 AAD，勿随意调整）
+            nl: banner.bytes.length,
+            nh: noticeHash(banner.bytes),
+            n: displayName,
+            s: plaintextLength,
+            t: Date.now(),
+            k: 'bytes',
+            ...(useGzip ? { os: sourceSize } : {}),
+            ...(values.note ? { c: values.note } : {}),
+            ...(expiresAt ? { exp: expiresAt } : {}),
           },
-        )
+          onProgress: makeProgress(basename(targetPath), values.quiet),
+        })
         await writer.finish()
-        results.push({ input: displayName, output: targetPath, layers, bytes: result.outputSize, sha256: result.sourceHash })
+        results.push({
+          input: displayName,
+          output: targetPath,
+          layers,
+          bytes: result.outputSize,
+          sha256: result.sourceHash,
+        })
       } catch (error) {
         writer.abort()
         safeUnlink(targetPath)
@@ -584,15 +591,14 @@ export async function cmdDecrypt(values, inputs) {
       } else if ((header.flags & 2) === 2) {
         // 容器内明文是 gzip 流：先跳过明文声明区（已在 source 里处理），再边解密边解压边写盘
         const queue = new ByteQueue()
-        const pipePromise = pipeline(Readable.from(queue), createGunzip(), createWriteStream(targetPath, { mode: 0o600 }))
+        const pipePromise = pipeline(
+          Readable.from(queue),
+          createGunzip(),
+          createWriteStream(targetPath, { mode: 0o600 }),
+        )
         const intoQueue = { write: (chunk) => queue.push(copyBytes(chunk)) }
         try {
-          await decryptStream(
-            source,
-            bannerSkippingSink(intoQueue, skip),
-            key,
-            makeProgress(targetName, values.quiet),
-          )
+          await decryptStream(source, bannerSkippingSink(intoQueue, skip), key, makeProgress(targetName, values.quiet))
           queue.end()
           await pipePromise
         } catch (error) {
@@ -603,7 +609,12 @@ export async function cmdDecrypt(values, inputs) {
       } else {
         const writer = fileSink(targetPath)
         try {
-          await decryptStream(source, bannerSkippingSink(writer.sink, skip), key, makeProgress(targetName, values.quiet))
+          await decryptStream(
+            source,
+            bannerSkippingSink(writer.sink, skip),
+            key,
+            makeProgress(targetName, values.quiet),
+          )
           await writer.finish()
         } catch (error) {
           writer.abort()

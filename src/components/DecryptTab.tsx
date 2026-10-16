@@ -33,7 +33,11 @@ export function DecryptTab() {
   /** 文件开头的明文声明（无需密钥即可读） */
   const [preambleNotice, setPreambleNotice] = useState<string | null>(null)
   const [checking, setChecking] = useState(false)
-  const [checkResult, setCheckResult] = useState<{ matched: boolean; fingerprint: string; hashVerified: boolean } | null>(null)
+  const [checkResult, setCheckResult] = useState<{
+    matched: boolean
+    fingerprint: string
+    hashVerified: boolean
+  } | null>(null)
   const filesRef = useRef<File | null>(null)
 
   /**
@@ -262,7 +266,10 @@ export function DecryptTab() {
         /* ignore */
       }
       store.setDecryptProgress(100)
-      store.logEvent('decrypt', `解密 ${file.name} → ${outputName}（哈希校验 ${result.hashMatched === null ? '无记录' : result.hashMatched ? '一致' : '不一致'}）`)
+      store.logEvent(
+        'decrypt',
+        `解密 ${file.name} → ${outputName}（哈希校验 ${result.hashMatched === null ? '无记录' : result.hashMatched ? '一致' : '不一致'}）`,
+      )
 
       if (result.expiresAt && Date.now() > result.expiresAt) {
         setNotice(`该文件设置了到期提醒：${new Date(result.expiresAt).toLocaleString()}（纯前端无法强制自毁，仅提示）`)
@@ -450,7 +457,9 @@ export function DecryptTab() {
                 <div data-testid="decrypt-preamble-notice">
                   <Alert tone="info">
                     <span className="font-semibold">{t('decrypt.plainNotice')}</span>
-                    <pre className="mt-1 whitespace-pre-wrap break-words text-[11px] leading-relaxed">{preambleNotice}</pre>
+                    <pre className="mt-1 whitespace-pre-wrap break-words text-[11px] leading-relaxed">
+                      {preambleNotice}
+                    </pre>
                     <span className="mt-1 block text-[11px] xq-muted">{t('decrypt.plainNoticeHint')}</span>
                   </Alert>
                 </div>
@@ -468,7 +477,9 @@ export function DecryptTab() {
                     <button
                       type="button"
                       className="xq-btn xq-btn-primary mt-1 text-[11px]"
-                      onClick={() => saveBlob(item.outputBlob!, item.outputName || 'restored.bin', 'application/octet-stream')}
+                      onClick={() =>
+                        saveBlob(item.outputBlob!, item.outputName || 'restored.bin', 'application/octet-stream')
+                      }
                     >
                       {t('decrypt.restore')} · {item.outputName}
                     </button>

@@ -66,8 +66,15 @@ export type KeyFile = KeyFilePlain | KeyFileProtected
 export const KEYFILE_WARNING = '此文件等同于你的 128 位主密钥。任何人拿到它都能解密你的 .XUQIAN 文件，请离线妥善保管。'
 
 function checksumOf(payload: Pick<KeyFilePayload, 'keyHex' | 'fingerprint' | 'layers' | 'createdAt'>): string {
-  const core = [payload.keyHex, payload.fingerprint, payload.layers?.join(',') ?? '', String(payload.createdAt ?? 0)].join('|')
-  return bytesToHex(sha256Bytes(utf8ToBytes(core))).slice(0, 16).toUpperCase()
+  const core = [
+    payload.keyHex,
+    payload.fingerprint,
+    payload.layers?.join(',') ?? '',
+    String(payload.createdAt ?? 0),
+  ].join('|')
+  return bytesToHex(sha256Bytes(utf8ToBytes(core)))
+    .slice(0, 16)
+    .toUpperCase()
 }
 
 export function buildPlainKeyFile(payload: KeyFilePayload): KeyFilePlain {

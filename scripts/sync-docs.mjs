@@ -18,7 +18,16 @@ import { fileURLToPath } from 'node:url'
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const outDir = resolve(root, 'public', 'docs')
 
-const docFiles = ['README.md', 'docs/GUIDE.md', 'docs/FORMAT.md', 'docs/SECURITY.md', 'docs/TESTING.md', 'docs/KEY-LIFECYCLE.md', 'docs/PROJECT-REPORT.md', 'docs/PERFORMANCE.md']
+const docFiles = [
+  'README.md',
+  'docs/GUIDE.md',
+  'docs/FORMAT.md',
+  'docs/SECURITY.md',
+  'docs/TESTING.md',
+  'docs/KEY-LIFECYCLE.md',
+  'docs/PROJECT-REPORT.md',
+  'docs/PERFORMANCE.md',
+]
 
 /** 校验：Markdown 中的相对链接目标必须存在；不得使用非 ASCII 锚点。 */
 function validate() {

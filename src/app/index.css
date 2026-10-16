@@ -50,9 +50,18 @@ body {
     radial-gradient(900px 520px at 92% 4%, rgba(216, 178, 106, 0.1), transparent 65%),
     linear-gradient(var(--grid-line) 1px, transparent 1px),
     linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
-  background-size: auto, auto, 44px 44px, 44px 44px;
+  background-size:
+    auto,
+    auto,
+    44px 44px,
+    44px 44px;
   color: var(--text);
-  font-family: system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    'Microsoft YaHei',
+    sans-serif;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
 }

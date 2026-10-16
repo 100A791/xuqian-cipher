@@ -19,7 +19,13 @@ export function SelfFilePage() {
   const [phase, setPhase] = useState<ProgressEvent | null>(null)
   const [percent, setPercent] = useState(0)
   const [cancelled, setCancelled] = useState(false)
-  const [result, setResult] = useState<{ keyHex: string; name: string; outputName: string; size: number; outputSize: number } | null>(null)
+  const [result, setResult] = useState<{
+    keyHex: string
+    name: string
+    outputName: string
+    size: number
+    outputSize: number
+  } | null>(null)
   const handleRef = useRef<RunHandle<{ cipherBytes: Uint8Array; keyK: Uint8Array }> | null>(null)
 
   const onProgress = (p: ProgressEvent) => {
@@ -44,7 +50,11 @@ export function SelfFilePage() {
       const bytes = await fileToBytes(file)
       const handle = runEncrypt(
         bytes,
-        { name: file.name, mime: file.type || 'application/octet-stream', created: Math.floor(file.lastModified / 1000) },
+        {
+          name: file.name,
+          mime: file.type || 'application/octet-stream',
+          created: Math.floor(file.lastModified / 1000),
+        },
         onProgress,
       )
       handleRef.current = handle
@@ -111,7 +121,8 @@ export function SelfFilePage() {
       {/* 如实告知速度：实测约 1.8–2 MB/s（浏览器 1.82 / Node 1.93~2.04），预估用 1.8。超过 2MB 就提前说，别让用户干等。 */}
       {file && file.size > 2 * 1024 * 1024 ? (
         <Alert tone="warn" data-testid="sc-file-slow-warn">
-          {t('sc.file.slowWarn')} ~{Math.ceil(file.size / 1024 / 1024 / 1.8)} s（{(file.size / 1024 / 1024).toFixed(1)} MB）
+          {t('sc.file.slowWarn')} ~{Math.ceil(file.size / 1024 / 1024 / 1.8)} s（{(file.size / 1024 / 1024).toFixed(1)}{' '}
+          MB）
         </Alert>
       ) : null}
 

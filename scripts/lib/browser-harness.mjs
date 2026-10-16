@@ -241,7 +241,8 @@ export async function launchSession({ base, port = 9333, windowSize = '1280,900'
   }
 
   const targets = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json()
-  const page = targets.find((t) => t.type === 'page' && t.url.startsWith('http')) ?? targets.find((t) => t.type === 'page')
+  const page =
+    targets.find((t) => t.type === 'page' && t.url.startsWith('http')) ?? targets.find((t) => t.type === 'page')
   if (!page) {
     browser.kill()
     throw new Error('找不到页面目标')
@@ -252,7 +253,12 @@ export async function launchSession({ base, port = 9333, windowSize = '1280,900'
   await cdp.send('Page.enable')
   await cdp.send('DOM.enable')
   await cdp.send('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: downloadDir })
-  await waitFor(cdp, `location.protocol.startsWith('http') && document.querySelector('#root')?.children.length > 0`, 60000, '页面加载完成')
+  await waitFor(
+    cdp,
+    `location.protocol.startsWith('http') && document.querySelector('#root')?.children.length > 0`,
+    60000,
+    '页面加载完成',
+  )
   // 必须装上下载拦截：它记录 <a download> 的文件名，测试才能断言"到底下载了什么"
   await cdp.eval(PATCH_DOWNLOADS)
   await cdp.eval(`document.documentElement.dataset.test = '1'; return true;`)

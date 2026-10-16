@@ -115,16 +115,25 @@ export async function detectAIWatermark(image, options = {}) {
 
   const evidence = []
   if (found?.publicInfo) evidence.push(`图片内含可读水印：${found.publicInfo}`)
-  if (measurements.metadata?.aiMarkers?.length) evidence.push(`元数据含 AI 工具签名：${measurements.metadata.aiMarkers.join('、')}`)
+  if (measurements.metadata?.aiMarkers?.length)
+    evidence.push(`元数据含 AI 工具签名：${measurements.metadata.aiMarkers.join('、')}`)
 
   return buildReport({
     kind: 'ai-watermark',
     signals: {
       // 水印检测复用与 AI 生成检测同一套权重名，保证报告结构一致；
       // 这里 metadata 记"元数据痕迹"，noise 记"LSB 异常"，frequency/color/edge 不参与水印判定
-      metadata: { score: metadataScore, note: '元数据中出现溯源/工具签名', raw: measurements.metadata?.aiMarkers ?? [] },
+      metadata: {
+        score: metadataScore,
+        note: '元数据中出现溯源/工具签名',
+        raw: measurements.metadata?.aiMarkers ?? [],
+      },
       noise: { score: lsb.score, note: 'LSB 平面异常度', raw: lsb.stats },
-      frequency: { score: watermarkScore, note: '是否直接读出本项目水印', raw: found ? { publicInfo: found.publicInfo } : null },
+      frequency: {
+        score: watermarkScore,
+        note: '是否直接读出本项目水印',
+        raw: found ? { publicInfo: found.publicInfo } : null,
+      },
     },
     measurements,
     evidence,

@@ -139,11 +139,7 @@ function isPrivateField(key: string): boolean {
  * 把标识性元数据加密进 `meta.x`，返回只含公开字段的新 meta。
  * salt 为首层 salt（随文件存储的随机 16 字节）。
  */
-export async function sealPrivateMeta(
-  meta: XuqianMeta,
-  masterKey: MasterKey,
-  salt: Uint8Array,
-): Promise<XuqianMeta> {
+export async function sealPrivateMeta(meta: XuqianMeta, masterKey: MasterKey, salt: Uint8Array): Promise<XuqianMeta> {
   const priv: Record<string, unknown> = {}
   const pub: Record<string, unknown> = {}
   for (const [key, value] of Object.entries(meta)) {
@@ -402,7 +398,8 @@ function validateHeader(
 ): void {
   if (!h || typeof h !== 'object') throw new FormatError('HEADER_INVALID')
   if (h.v !== fixed.version || h.flags !== fixed.flags) throw new FormatError('HEADER_INVALID')
-  if (h.cs !== fixed.chunkSize || h.cc !== fixed.chunkCount || h.lc !== fixed.layerCount) throw new FormatError('HEADER_INVALID')
+  if (h.cs !== fixed.chunkSize || h.cc !== fixed.chunkCount || h.lc !== fixed.layerCount)
+    throw new FormatError('HEADER_INVALID')
   if (!Array.isArray(h.layers) || h.layers.length !== h.lc) throw new FormatError('HEADER_INVALID')
   if (h.lc < MIN_LAYERS || h.lc > MAX_LAYERS) throw new FormatError('LAYER_COUNT_INVALID')
   if (!Number.isSafeInteger(h.cc) || h.cc < 1) throw new FormatError('CHUNK_COUNT_INVALID')
@@ -453,11 +450,7 @@ export function plainChunkSizeOf(chunkSize: number, layerCount: number): number 
 /**
  * 由明文总长度推算分块布局；加密端与解密端共用，保证边界严格一致。
  */
-export function planChunks(
-  plaintextLength: number,
-  chunkSize: number,
-  layerCount: number,
-): ChunkPlan {
+export function planChunks(plaintextLength: number, chunkSize: number, layerCount: number): ChunkPlan {
   const layers = Math.max(1, layerCount)
   const plainChunkSize = plainChunkSizeOf(chunkSize, layers)
   if (plainChunkSize < 1) throw new FormatError('CHUNK_SIZE_INVALID')
@@ -544,9 +537,7 @@ export async function encryptContainer(
     meta: options.meta,
     encryptMeta: options.encryptMeta,
     timestampSalt: options.timestampSalt,
-    onProgress: options.onProgress
-      ? (done, total) => options.onProgress?.(done, total, 'encrypt')
-      : undefined,
+    onProgress: options.onProgress ? (done, total) => options.onProgress?.(done, total, 'encrypt') : undefined,
     randomFn: options.randomFn,
     // 保持旧语义：哈希永远取自实际内容，忽略调用方传入的 meta.h
     forceHashScan: true,
@@ -587,7 +578,13 @@ export function describeHeader(header: XuqianHeader): Array<{ key: string; value
     { key: 'layers', value: String(header.lc) },
     { key: 'algorithms', value: header.layers.map((l) => l.a).join(' → ') },
     { key: 'chunks', value: `${header.cc} × ${header.cs} B` },
-    { key: 'flags', value: [header.flags & HEADER_FLAG_GZIP ? 'gzip' : '', header.flags & HEADER_FLAG_ENC_META ? 'enc-meta' : ''].filter(Boolean).join(',') || '-' },
+    {
+      key: 'flags',
+      value:
+        [header.flags & HEADER_FLAG_GZIP ? 'gzip' : '', header.flags & HEADER_FLAG_ENC_META ? 'enc-meta' : '']
+          .filter(Boolean)
+          .join(',') || '-',
+    },
     { key: 'headerCrc', value: `0x${header.crc.toString(16).padStart(8, '0')}` },
   ]
   const meta = header.meta ?? {}

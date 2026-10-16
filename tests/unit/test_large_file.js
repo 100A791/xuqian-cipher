@@ -45,7 +45,10 @@ function firstDiff(a, b) {
 }
 
 const key = patterned(16, 7)
-const meta = [['name', 'large.bin'], ['mime', 'application/octet-stream']]
+const meta = [
+  ['name', 'large.bin'],
+  ['mime', 'application/octet-stream'],
+]
 
 await runner.test('12 MB / 12 个分块：内容逐字节一致', async () => {
   const CHUNKS = 12
@@ -67,7 +70,9 @@ await runner.test('12 MB / 12 个分块：内容逐字节一致', async () => {
 
   const mbps = (content.length / 1024 / 1024 / ((encryptedMs + decryptedMs) / 1000)).toFixed(1)
   assertTrue(cipherBytes.length > content.length, '密文应略大于明文')
-  console.log(`      ${CHUNKS} MB 加密 ${encryptedMs}ms + 解密 ${decryptedMs}ms ≈ ${mbps} MB/s（自研纯 JS AES-CTR，无硬件加速）`)
+  console.log(
+    `      ${CHUNKS} MB 加密 ${encryptedMs}ms + 解密 ${decryptedMs}ms ≈ ${mbps} MB/s（自研纯 JS AES-CTR，无硬件加速）`,
+  )
 })
 
 for (const [label, size] of [

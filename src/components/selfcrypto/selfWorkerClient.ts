@@ -104,12 +104,16 @@ export function runEncrypt(
     // 回退：主线程直跑（会阻塞界面，但功能可用）
     (report) =>
       Promise.resolve(
-        encryptFile(bytes, [
-          ['name', meta.name],
-          ['size', BigInt(bytes.length)],
-          ['mime', meta.mime],
-          ['created', BigInt(meta.created)],
-        ], { onProgress: report }),
+        encryptFile(
+          bytes,
+          [
+            ['name', meta.name],
+            ['size', BigInt(bytes.length)],
+            ['mime', meta.mime],
+            ['created', BigInt(meta.created)],
+          ],
+          { onProgress: report },
+        ),
       ).then((r) => ({ cipherBytes: r.cipherBytes, keyK: r.keyK })),
   )
 }
@@ -120,14 +124,10 @@ export function runDecrypt(
   onProgress?: (progress: ProgressEvent) => void,
 ): RunHandle<DecryptResult> {
   const keyCopy = new Uint8Array(masterKey)
-  return runInWorker<DecryptResult>(
-    { op: 'decrypt', bytes, masterKey: keyCopy },
-    onProgress,
-    async (report) => {
-      const result = await decryptFile(bytes, keyCopy, { onProgress: report })
-      return { plainBytes: result.plainBytes, metadata: result.metadata as Map<string, unknown> }
-    },
-  )
+  return runInWorker<DecryptResult>({ op: 'decrypt', bytes, masterKey: keyCopy }, onProgress, async (report) => {
+    const result = await decryptFile(bytes, keyCopy, { onProgress: report })
+    return { plainBytes: result.plainBytes, metadata: result.metadata as Map<string, unknown> }
+  })
 }
 
 export { supportsWorker }

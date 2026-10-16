@@ -118,7 +118,9 @@ export function extractExifTags(payload) {
     if (type !== 2 || num === 0) continue // 只处理 ASCII
     const valueOffset = num <= 4 ? entry + 8 : u32(entry + 8)
     if (valueOffset + num > tiff.length) continue
-    out[name] = utf8Decode(tiff.subarray(valueOffset, valueOffset + num)).replace(/\0+$/, '').trim()
+    out[name] = utf8Decode(tiff.subarray(valueOffset, valueOffset + num))
+      .replace(/\0+$/, '')
+      .trim()
   }
   return out
 }
@@ -137,7 +139,11 @@ export function readPngTextChunks(bytes) {
     if (type === 'tEXt' || type === 'iTXt' || type === 'zTXt') {
       let klen = 0
       while (klen < data.length && data[klen] !== 0) klen++
-      chunks.push({ type, keyword: ascii(data.subarray(0, klen)), text: type === 'zTXt' ? '' : ascii(data.subarray(klen + 1)) })
+      chunks.push({
+        type,
+        keyword: ascii(data.subarray(0, klen)),
+        text: type === 'zTXt' ? '' : ascii(data.subarray(klen + 1)),
+      })
     }
     if (type === 'IEND') break
     off += 12 + len
@@ -292,7 +298,10 @@ export function scanMetadata(bytes) {
     const markers = scanMetadataMarkers(bytes)
     if (markers.exifAt >= 0) {
       result.hasExif = true
-      Object.assign(result.exif, extractExifTags(bytes.subarray(markers.exifAt, Math.min(bytes.length, markers.exifAt + 65536))))
+      Object.assign(
+        result.exif,
+        extractExifTags(bytes.subarray(markers.exifAt, Math.min(bytes.length, markers.exifAt + 65536))),
+      )
     }
     if (markers.xmpAt >= 0) {
       result.hasXmp = true

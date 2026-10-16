@@ -35,9 +35,7 @@ describe('双语字典完整性', () => {
 
   it('translate() 对每个键都返回真实文案，绝不返回原始键名', () => {
     const fallen = (Object.keys(MESSAGES.zh) as MessageKey[]).flatMap((key) =>
-      (['zh', 'en'] as const)
-        .filter((lang) => translate(lang, key) === key)
-        .map((lang) => `${lang}:${key}`),
+      (['zh', 'en'] as const).filter((lang) => translate(lang, key) === key).map((lang) => `${lang}:${key}`),
     )
     expect(fallen).toEqual([])
   })

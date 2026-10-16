@@ -11,12 +11,7 @@
 
 export type PassphraseLevel = 'weak' | 'fair' | 'strong' | 'very-strong'
 
-export type PassphraseWarning =
-  | 'short'
-  | 'single-class'
-  | 'repeated'
-  | 'sequence'
-  | 'common'
+export type PassphraseWarning = 'short' | 'single-class' | 'repeated' | 'sequence' | 'common'
 
 export interface PassphraseEstimate {
   /** 估算熵（bit） */
@@ -27,11 +22,40 @@ export interface PassphraseEstimate {
 
 /** 极常见口令（小样本，命中即视为可被字典直接猜中）。 */
 const COMMON = new Set([
-  'password', 'passw0rd', '123456', '12345678', '123456789', '1234567890',
-  'qwerty', 'qwerty123', 'abc123', '111111', '000000', 'iloveyou', 'admin',
-  'admin888', 'letmein', 'welcome', 'monkey', 'dragon', 'sunshine', 'princess',
-  'football', 'baseball', 'master', 'login', 'starwars', 'whatever', 'trustno1',
-  'xuqian', 'xuqian123', 'woaini', 'woaini1314', '5201314', 'a123456', 'qazwsx',
+  'password',
+  'passw0rd',
+  '123456',
+  '12345678',
+  '123456789',
+  '1234567890',
+  'qwerty',
+  'qwerty123',
+  'abc123',
+  '111111',
+  '000000',
+  'iloveyou',
+  'admin',
+  'admin888',
+  'letmein',
+  'welcome',
+  'monkey',
+  'dragon',
+  'sunshine',
+  'princess',
+  'football',
+  'baseball',
+  'master',
+  'login',
+  'starwars',
+  'whatever',
+  'trustno1',
+  'xuqian',
+  'xuqian123',
+  'woaini',
+  'woaini1314',
+  '5201314',
+  'a123456',
+  'qazwsx',
 ])
 
 const KEYBOARD_ROWS = ['qwertyuiop', 'asdfghjkl', 'zxcvbnm', '1234567890', 'abcdefghijklmnopqrstuvwxyz']

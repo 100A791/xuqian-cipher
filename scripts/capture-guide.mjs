@@ -37,7 +37,14 @@ for (const s of samples) {
 
 const browser = spawn(
   BROWSER,
-  ['--headless=new', `--remote-debugging-port=${PORT}`, `--user-data-dir=${profileDir}`, '--no-first-run', '--window-size=1280,900', BASE],
+  [
+    '--headless=new',
+    `--remote-debugging-port=${PORT}`,
+    `--user-data-dir=${profileDir}`,
+    '--no-first-run',
+    '--window-size=1280,900',
+    BASE,
+  ],
   { stdio: 'ignore' },
 )
 
@@ -53,7 +60,11 @@ function send(method, params = {}) {
   })
 }
 async function ev(expr) {
-  const r = await send('Runtime.evaluate', { expression: `(async () => { ${expr} })()`, awaitPromise: true, returnByValue: true })
+  const r = await send('Runtime.evaluate', {
+    expression: `(async () => { ${expr} })()`,
+    awaitPromise: true,
+    returnByValue: true,
+  })
   if (r.exceptionDetails) throw new Error(r.exceptionDetails.exception?.description ?? r.exceptionDetails.text)
   return r.result.value
 }
@@ -136,13 +147,18 @@ const PATCH = `
 
 try {
   for (let i = 0; i < 80; i++) {
-    try { if ((await fetch(`http://127.0.0.1:${PORT}/json/version`)).ok) break } catch {}
+    try {
+      if ((await fetch(`http://127.0.0.1:${PORT}/json/version`)).ok) break
+    } catch {}
     await sleep(250)
   }
   const list = await (await fetch(`http://127.0.0.1:${PORT}/json/list`)).json()
   const page = list.find((t) => t.type === 'page' && t.url.startsWith('http'))
   ws = new WebSocket(page.webSocketDebuggerUrl)
-  await new Promise((res, rej) => { ws.addEventListener('open', res); ws.addEventListener('error', rej) })
+  await new Promise((res, rej) => {
+    ws.addEventListener('open', res)
+    ws.addEventListener('error', rej)
+  })
   ws.addEventListener('message', (e) => {
     const m = JSON.parse(e.data)
     if (m.id && pending.has(m.id)) {
@@ -151,7 +167,9 @@ try {
       m.error ? reject(new Error(m.error.message)) : resolve(m.result)
     }
   })
-  await send('Runtime.enable'); await send('DOM.enable'); await send('Page.enable')
+  await send('Runtime.enable')
+  await send('DOM.enable')
+  await send('Page.enable')
   await send('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: dlDir })
   await waitFor(`document.querySelector('#root')?.children.length > 0`, 30000, '挂载')
   await ev(PATCH)
@@ -209,7 +227,9 @@ try {
   `)
   // 轮询直到出现"处理中"但尚未弹窗
   for (let i = 0; i < 200; i++) {
-    const state = await ev(`return { busy: /处理中/.test(document.body.innerText), modal: document.querySelector('#xq-key-title') !== null }`)
+    const state = await ev(
+      `return { busy: /处理中/.test(document.body.innerText), modal: document.querySelector('#xq-key-title') !== null }`,
+    )
     if (state.modal) break
     if (state.busy) {
       await sleep(60)
@@ -354,7 +374,11 @@ try {
     document.querySelector('[data-testid="decrypt-key-check"]').click();
     return true;
   `)
-  await waitFor(`/密钥错误或文件损坏/.test(document.querySelector('[data-testid="decrypt-check-result"]')?.innerText ?? '')`, 90000, '自检不匹配结果')
+  await waitFor(
+    `/密钥错误或文件损坏/.test(document.querySelector('[data-testid="decrypt-check-result"]')?.innerText ?? '')`,
+    90000,
+    '自检不匹配结果',
+  )
   await sleep(300)
   await shot('08b-selfcheck-mismatch', '密钥自检：错误密钥给出统一结论并显示当前密钥指纹')
   // 恢复正确密钥，后续用例继续
@@ -438,7 +462,12 @@ try {
   await sleep(400)
   const lower = await send('Page.captureScreenshot', { format: 'png' })
   writeFileSync(join(outDir, '16-tools-inspect-shamir.png'), Buffer.from(lower.data, 'base64'))
-  shots.push({ name: '16-tools-inspect-shamir', note: '工具分区（下半部分）：查看 .XUQIAN 文件头、Shamir 分片恢复、设置与本地日志', file: 'docs/images/16-tools-inspect-shamir.png', bytes: readFileSync(join(outDir, '16-tools-inspect-shamir.png')).length })
+  shots.push({
+    name: '16-tools-inspect-shamir',
+    note: '工具分区（下半部分）：查看 .XUQIAN 文件头、Shamir 分片恢复、设置与本地日志',
+    file: 'docs/images/16-tools-inspect-shamir.png',
+    bytes: readFileSync(join(outDir, '16-tools-inspect-shamir.png')).length,
+  })
   console.log('  📸 16-tools-inspect-shamir.png — 工具分区下半部分')
   await ev(`window.scrollTo(0, 0); return true;`)
   await sleep(250)
@@ -493,11 +522,19 @@ try {
   `)
   const qr = await send('Page.captureScreenshot', { format: 'png', clip })
   writeFileSync(join(outDir, '21-key-qr.png'), Buffer.from(qr.data, 'base64'))
-  shots.push({ name: '21-key-qr', note: '密钥二维码特写（等同密钥，切勿外传）', file: 'docs/images/21-key-qr.png', bytes: readFileSync(join(outDir, '21-key-qr.png')).length })
+  shots.push({
+    name: '21-key-qr',
+    note: '密钥二维码特写（等同密钥，切勿外传）',
+    file: 'docs/images/21-key-qr.png',
+    bytes: readFileSync(join(outDir, '21-key-qr.png')).length,
+  })
   console.log('  📸 21-key-qr.png — 密钥二维码特写')
 
   writeFileSync(join(workDir, 'shots.json'), JSON.stringify(shots, null, 2))
-  writeFileSync(join(process.cwd(), 'docs', 'images', 'shots.json'), JSON.stringify({ base: BASE, ts: new Date().toISOString(), shots }, null, 2))
+  writeFileSync(
+    join(process.cwd(), 'docs', 'images', 'shots.json'),
+    JSON.stringify({ base: BASE, ts: new Date().toISOString(), shots }, null, 2),
+  )
   console.log(`\n共生成 ${shots.length} 张截图 → docs/images/`)
   void cipherText
   void textKey
@@ -505,7 +542,11 @@ try {
   console.error('截图失败:', error.message)
   process.exitCode = 1
 } finally {
-  try { ws?.close() } catch {}
+  try {
+    ws?.close()
+  } catch {}
   browser.kill()
-  try { rmSync(workDir, { recursive: true, force: true }) } catch {}
+  try {
+    rmSync(workDir, { recursive: true, force: true })
+  } catch {}
 }

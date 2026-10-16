@@ -33,9 +33,7 @@ const nowPng = pngs.filter((f) => f.startsWith('now-')).length
 const scriptedPng = totalPng - nowPng
 
 /** GUIDE 正文里真正内嵌的截图（去重）。注意这与"目录里有几张"是两个口径。 */
-const guideRefs = new Set(
-  [...read('docs/GUIDE.md').matchAll(/images\/[A-Za-z0-9._-]+\.png/g)].map((m) => m[0]),
-)
+const guideRefs = new Set([...read('docs/GUIDE.md').matchAll(/images\/[A-Za-z0-9._-]+\.png/g)].map((m) => m[0]))
 const linkedPng = guideRefs.size
 
 const selfSuites = readdirSync(join(root, 'tests', 'unit')).filter((f) => /^test_.*\.js$/.test(f)).length
@@ -67,14 +65,15 @@ const failures = []
 function claim({ label, file, pattern, expect, hint }) {
   const found = read(file).match(pattern)
   if (!found) {
-    failures.push(`${label}｜锚点消失：${file} 里已找不到 ${pattern}\n    → 文案被改过了。请把本脚本的 pattern 同步更新，否则这条守卫会静默失效。`)
+    failures.push(
+      `${label}｜锚点消失：${file} 里已找不到 ${pattern}\n    → 文案被改过了。请把本脚本的 pattern 同步更新，否则这条守卫会静默失效。`,
+    )
     return
   }
   const got = found.slice(1).map((n) => Number.parseInt(n, 10))
   if (got.join('/') !== expect.join('/')) {
     failures.push(
-      `${label}｜${file} 写的是 ${got.join(' / ')}，实测是 ${expect.join(' / ')}` +
-        (hint ? `\n    → ${hint}` : ''),
+      `${label}｜${file} 写的是 ${got.join(' / ')}，实测是 ${expect.join(' / ')}` + (hint ? `\n    → ${hint}` : ''),
     )
   }
 }
@@ -193,7 +192,9 @@ for (const file of assertionDocs) {
   }
 }
 if (assertionValues.size > 1) {
-  const detail = [...assertionValues.entries()].map(([v, files]) => `${v}（${[...new Set(files)].join(', ')}）`).join(' vs ')
+  const detail = [...assertionValues.entries()]
+    .map(([v, files]) => `${v}（${[...new Set(files)].join(', ')}）`)
+    .join(' vs ')
   failures.push(`自研断言数在文档间不一致：${detail}\n    → 请统一为实测值（跑 node tests/unit/run-all.js 取总数）。`)
 }
 
@@ -212,10 +213,14 @@ const actualNames = testFileNames.map((p) => p.split('/').pop())
 
 const unlisted = actualNames.filter((n) => !listedNames.has(n))
 if (unlisted.length > 0) {
-  failures.push(`TESTING.md 的单元测试分项里没有列出：${unlisted.join(', ')}\n    → 新增测试文件后请在「## 二、单元测试」下补一节，否则文档与实测会脱节。`)
+  failures.push(
+    `TESTING.md 的单元测试分项里没有列出：${unlisted.join(', ')}\n    → 新增测试文件后请在「## 二、单元测试」下补一节，否则文档与实测会脱节。`,
+  )
 }
 if (listedSum !== vitestCases) {
-  failures.push(`TESTING.md 单元测试分项合计是 ${listedSum}，实测总数是 ${vitestCases}\n    → 逐文件的小节数字与实际用例数对不上（各文件用 it(/test( 静态计数）。`)
+  failures.push(
+    `TESTING.md 单元测试分项合计是 ${listedSum}，实测总数是 ${vitestCases}\n    → 逐文件的小节数字与实际用例数对不上（各文件用 it(/test( 静态计数）。`,
+  )
 }
 
 /**

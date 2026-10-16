@@ -13,7 +13,9 @@ import { StartScreen } from './components/StartScreen.tsx'
 // 的用户也要白下载整个自研路线（含 AI 检测的 FFT/DWT）。改成 lazy 后首屏主包从
 // 484 kB 降到约 411 kB（gzip 163 → 137 kB），自研路线拆成约 13 个按需 chunk。
 const SelfHome = lazy(() => import('./components/selfcrypto/SelfHome.tsx').then((m) => ({ default: m.SelfHome })))
-const SelfFilePage = lazy(() => import('./components/selfcrypto/SelfFilePage.tsx').then((m) => ({ default: m.SelfFilePage })))
+const SelfFilePage = lazy(() =>
+  import('./components/selfcrypto/SelfFilePage.tsx').then((m) => ({ default: m.SelfFilePage })),
+)
 const SelfDecryptPage = lazy(() =>
   import('./components/selfcrypto/SelfDecryptPage.tsx').then((m) => ({ default: m.SelfDecryptPage })),
 )
@@ -97,7 +99,12 @@ export function App() {
           <p className="mt-0.5 text-[11px] xq-muted">{t('brand.tagline')}</p>
         </div>
         <div className="flex items-center gap-2">
-          <button type="button" className="xq-btn text-xs" data-testid="mode-switch" onClick={() => store.setMode(null)}>
+          <button
+            type="button"
+            className="xq-btn text-xs"
+            data-testid="mode-switch"
+            onClick={() => store.setMode(null)}
+          >
             {t('start.switch')}
           </button>
           <button
@@ -125,7 +132,13 @@ export function App() {
           >
             {lang === 'zh' ? 'EN' : '中文'}
           </button>
-          <a className="xq-btn text-xs" href="./docs/index.html" target="_blank" rel="noopener noreferrer" title={t('nav.docs')}>
+          <a
+            className="xq-btn text-xs"
+            href="./docs/index.html"
+            target="_blank"
+            rel="noopener noreferrer"
+            title={t('nav.docs')}
+          >
             {t('nav.docs')}
           </a>
         </div>

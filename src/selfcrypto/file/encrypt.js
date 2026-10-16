@@ -162,7 +162,9 @@ export function encryptFile(data, metadata = [], options = {}) {
   const onProgress = typeof options.onProgress === 'function' ? options.onProgress : undefined
 
   // 第 1 步：随机材料
-  const keyK = options.masterKey ? copyBytes(assertExactLength(options.masterKey, MASTER_KEY_LEN, '主密钥')) : randomBytes(MASTER_KEY_LEN)
+  const keyK = options.masterKey
+    ? copyBytes(assertExactLength(options.masterKey, MASTER_KEY_LEN, '主密钥'))
+    : randomBytes(MASTER_KEY_LEN)
   const salt = randomBytes(32)
   const bootNonce = randomBytes(16)
 

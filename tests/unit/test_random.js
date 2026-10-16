@@ -22,26 +22,43 @@ await runner.test('randomBytes：长度为 0/1/16/32/1024 时都返回对应长�
 
 await runner.test('randomBytes：非法长度被拒绝（负数 / 非整数）', () => {
   let threw = 0
-  try { randomBytes(-1) } catch { threw++ }
-  try { randomBytes(1.5) } catch { threw++ }
+  try {
+    randomBytes(-1)
+  } catch {
+    threw++
+  }
+  try {
+    randomBytes(1.5)
+  } catch {
+    threw++
+  }
   assertEqual(threw, 2, '负数与非整数都应抛错')
 })
 
 await runner.test('randomBytes：两次调用结果不同（不是常量）', () => {
   const a = randomBytes(32)
   const b = randomBytes(32)
-  assertTrue(a.some((v, i) => v !== b[i]), '两次 32 字节不应完全相同')
+  assertTrue(
+    a.some((v, i) => v !== b[i]),
+    '两次 32 字节不应完全相同',
+  )
 })
 
 await runner.test('randomUint32：使用完整的 32 位（回归：曾退化成 8 位）', () => {
   const samples = []
   for (let i = 0; i < 256; i++) samples.push(randomUint32())
-  assertTrue(samples.every((v) => Number.isInteger(v) && v >= 0 && v <= 0xffffffff), '应落在 uint32 值域内')
+  assertTrue(
+    samples.every((v) => Number.isInteger(v) && v >= 0 && v <= 0xffffffff),
+    '应落在 uint32 值域内',
+  )
   // 若只有 8 位随机性，则全部样本必然 < 256（256 次全命中的概率约 256!/256^256 ≈ 0）
   const max = Math.max(...samples)
   assertTrue(max >= 256, `最大值应超过 255（实际 ${max}）—— 说明只用了 1 个字节`)
   // 最高位被置位的概率是 1/2，256 次全都为 0 的概率是 2^-256，可视为必然出现
-  assertTrue(samples.some((v) => v >= 0x80000000), '应当至少出现一个 ≥ 2^31 的样本（高位参与随机）')
+  assertTrue(
+    samples.some((v) => v >= 0x80000000),
+    '应当至少出现一个 ≥ 2^31 的样本（高位参与随机）',
+  )
 })
 
 await runner.test('randomInt：闭区间取值，边界都能取到', () => {
@@ -57,8 +74,16 @@ await runner.test('randomInt：闭区间取值，边界都能取到', () => {
 
 await runner.test('randomInt：非法区间被拒绝（max < min / 非整数）', () => {
   let threw = 0
-  try { randomInt(5, 1) } catch { threw++ }
-  try { randomInt(0.5, 3) } catch { threw++ }
+  try {
+    randomInt(5, 1)
+  } catch {
+    threw++
+  }
+  try {
+    randomInt(0.5, 3)
+  } catch {
+    threw++
+  }
   assertEqual(threw, 2, '两种非法入参都应抛错')
 })
 
@@ -80,7 +105,10 @@ await runner.test('randomBytes：超过 65536 字节也能取（回归：WebCryp
   const b = randomBytes(65537)
   assertEqual(a.length, 65537, '65537 字节长度')
   assertTrue(new Set(a).size > 100, '取值应散布（不是常量或局部填充）')
-  assertTrue(a.some((v, i) => v !== b[i]), '两次大块请求不应完全相同')
+  assertTrue(
+    a.some((v, i) => v !== b[i]),
+    '两次大块请求不应完全相同',
+  )
   // 覆盖更多分片：1 MiB 也要可用
   assertEqual(randomBytes(1024 * 1024).length, 1024 * 1024, '1 MiB 长度')
 })

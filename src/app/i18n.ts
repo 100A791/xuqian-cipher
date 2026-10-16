@@ -10,7 +10,8 @@ export const MESSAGES = {
     'start.title': '选择加密方式',
     'start.lead': '两条路线完全独立，产出都是 .xuqian 文件，但格式与密钥互不通用。选定后仍可随时切换。',
     'start.simple.title': '简单加密',
-    'start.simple.desc': '使用业界成熟的密码库与浏览器原生 WebCrypto：AES-128/256-GCM、ChaCha20-Poly1305、XChaCha20-Poly1305、SM4-GCM，可叠加 1~10 层。',
+    'start.simple.desc':
+      '使用业界成熟的密码库与浏览器原生 WebCrypto：AES-128/256-GCM、ChaCha20-Poly1305、XChaCha20-Poly1305、SM4-GCM，可叠加 1~10 层。',
     'start.simple.p1': '算法由成熟库实现，经过大量实际使用与审计。',
     'start.simple.p2': '支持多层叠加、gzip、加密声明、密钥文件与分片恢复。',
     'start.simple.p3': '带命令行工具，且做过浏览器 ↔ 命令行的双向互解验证。',
@@ -37,7 +38,8 @@ export const MESSAGES = {
     'sc.working': '处理中…',
     'sc.loading': '正在载入自研加密模块…',
     'sc.home.title': '自研加密',
-    'sc.home.lead': '这一条路线的加密算法全部由本项目自行实现，不引入任何第三方加密库；每个算法都对照标准测试向量验证过。',
+    'sc.home.lead':
+      '这一条路线的加密算法全部由本项目自行实现，不引入任何第三方加密库；每个算法都对照标准测试向量验证过。',
     'sc.home.formatNote': '注意：自研路线产出的 .xuqian 与「简单加密」的 .xuqian 格式互不通用，两边不能互相解密。',
     'sc.entry.file': '用自研格式加密文件，产出 .xuqian 并给出一把 128 位密钥（只显示一次）。',
     'sc.entry.decrypt': '解密自研格式的 .xuqian；可先用「自检密钥」确认密钥对不对。',
@@ -131,7 +133,8 @@ export const MESSAGES = {
     'sc.wm.none': '（无）',
     'sc.wm.locked': '需要 WK 才能读取',
     'sc.ai.title': 'AI 检测',
-    'sc.ai.desc': '读取元数据（EXIF / XMP / C2PA / IPTC）并做频域、噪声、色彩、边缘统计，输出线索报告。JPEG / PNG / WebP 按容器结构解析；HEIC / AVIF 只做标记扫描（扫到就算有，扫不到不等于没有）。',
+    'sc.ai.desc':
+      '读取元数据（EXIF / XMP / C2PA / IPTC）并做频域、噪声、色彩、边缘统计，输出线索报告。JPEG / PNG / WebP 按容器结构解析；HEIC / AVIF 只做标记扫描（扫到就算有，扫不到不等于没有）。',
     'sc.ai.pick': '选择图片',
     'sc.ai.run': '开始检测',
     'sc.ai.score': '综合分',
@@ -144,14 +147,18 @@ export const MESSAGES = {
     'sc.ai.watermarkTitle': '水印检出',
     'sc.status.title': '算法与状态',
     'sc.status.desc': '自研路线当前已验证到什么程度、还有哪些缺口，都在这里如实列出。',
-    'sc.status.specParams': 'FK 已明确：它指国密 SM4 标准（GB/T 32907-2016）里的系统参数，是算法内置常量，与文件格式无关。文件头偏移 10 的那 2 字节是普通保留位（RESERVED）—— 固定写 0，读到非 0 值即拒绝解析；字段名已从 RESERVED_FK 更正，以免与 SM4 的 FK 混淆。PBKDF2 测试向量按 §7 优先采用 HMAC-SHA256（已定案）。',
+    'sc.status.specParams':
+      'FK 已明确：它指国密 SM4 标准（GB/T 32907-2016）里的系统参数，是算法内置常量，与文件格式无关。文件头偏移 10 的那 2 字节是普通保留位（RESERVED）—— 固定写 0，读到非 0 值即拒绝解析；字段名已从 RESERVED_FK 更正，以免与 SM4 的 FK 混淆。PBKDF2 测试向量按 §7 优先采用 HMAC-SHA256（已定案）。',
     'sc.status.verified': '已验证的算法与模块',
     'sc.status.verifiedHint': '每项都对照标准测试向量或做了往返 / 交叉验证。',
-    'sc.status.vectorNote': '共 15 套 234 项断言；测试向量由 OpenSSL 独立生成，与自研实现相互印证；命令：pnpm test:selfcrypto',
+    'sc.status.vectorNote':
+      '共 15 套 234 项断言；测试向量由 OpenSSL 独立生成，与自研实现相互印证；命令：pnpm test:selfcrypto',
     'sc.status.gaps': '已知缺口（如实标注）',
     'sc.status.gap1': 'AI 生成检测的权重与阈值未经真实样本标定，只能作为线索，不能作为结论。',
-    'sc.status.gap2': '频域三种变换（8×8 DCT、2D FFT、Haar DWT）均已实现并纳入频域分；仍缺的是真 PRNU —— 只做到残差强度，未做多图相关分析。',
-    'sc.status.gap3': '图片水印是 LSB 脆弱水印，对压缩、缩放、裁剪不鲁棒；元数据扫描支持 JPEG / PNG / WebP（按容器结构解析），HEIC / AVIF 只做标记扫描（扫不到不等于没有）。',
+    'sc.status.gap2':
+      '频域三种变换（8×8 DCT、2D FFT、Haar DWT）均已实现并纳入频域分；仍缺的是真 PRNU —— 只做到残差强度，未做多图相关分析。',
+    'sc.status.gap3':
+      '图片水印是 LSB 脆弱水印，对压缩、缩放、裁剪不鲁棒；元数据扫描支持 JPEG / PNG / WebP（按容器结构解析），HEIC / AVIF 只做标记扫描（扫不到不等于没有）。',
     'tab.encrypt': '加密',
     'tab.decrypt': '解密',
     'tab.text': '文本',
@@ -191,9 +198,11 @@ export const MESSAGES = {
     'encrypt.gzip': '加密前 gzip 压缩',
     'encrypt.gzip.hint': '体积更小；解密后自动解压',
     'encrypt.encryptMeta': '加密元数据（隐藏原文件名）',
-    'encrypt.encryptMeta.hint': '把原文件名、MIME、备注一并加密；没有密钥读不到"这是什么文件"。关闭则这些信息明文写在文件头',
+    'encrypt.encryptMeta.hint':
+      '把原文件名、MIME、备注一并加密；没有密钥读不到"这是什么文件"。关闭则这些信息明文写在文件头',
     'encrypt.timestampSalt': '时间戳附加盐（域分离）',
-    'encrypt.timestampSalt.hint': '把创建时间并入密钥派生，使同一密钥在不同文件上派生出不同子密钥。⚠ 此选项不提升安全性：时间戳需明文存入文件头，公开的盐不提供机密性',
+    'encrypt.timestampSalt.hint':
+      '把创建时间并入密钥派生，使同一密钥在不同文件上派生出不同子密钥。⚠ 此选项不提升安全性：时间戳需明文存入文件头，公开的盐不提供机密性',
     'encrypt.note': '备注（写入文件头，明文可见）',
     'encrypt.expires': '到期提醒时间（可选，仅提示）',
     'encrypt.start': '开始加密',
@@ -245,9 +254,11 @@ export const MESSAGES = {
     'decrypt.headerInfo': '文件头信息（明文可见，不含密钥）',
     'decrypt.bannerStripped': '已剥离开头的加密声明（{n} 字节，旧格式文件）',
     'decrypt.plainNotice': '📄 文件开头的明文声明（不需要密钥即可读）',
-    'decrypt.plainNoticeHint': '这段声明是明文，写在密文最前面，任何人都能读到；它的哈希记在加密头部里，所以删掉或改写它都会导致解密失败。',
+    'decrypt.plainNoticeHint':
+      '这段声明是明文，写在密文最前面，任何人都能读到；它的哈希记在加密头部里，所以删掉或改写它都会导致解密失败。',
     'encrypt.notice': '加密声明（明写在文件最前，不可删去）',
-    'encrypt.noticeHint': '加密完成后，这段声明会以明文写在文件最开头——不需要密钥就能读到，适合放"本件由谁加密、怎么联系、使用须知"。它的长度与 SHA-256 会被记进加密头部参与认证，因此删掉或改写它都会导致解密失败（不是"工具不给选项"，是真的解不开）。留空则使用默认声明，本站不提供「不写声明」的选项。',
+    'encrypt.noticeHint':
+      '加密完成后，这段声明会以明文写在文件最开头——不需要密钥就能读到，适合放"本件由谁加密、怎么联系、使用须知"。它的长度与 SHA-256 会被记进加密头部参与认证，因此删掉或改写它都会导致解密失败（不是"工具不给选项"，是真的解不开）。留空则使用默认声明，本站不提供「不写声明」的选项。',
     'decrypt.destroyed': '解密完成后已清除内存中的密钥与子密钥',
     'check.button': '自检密钥',
     'check.running': '正在自检…',
@@ -311,7 +322,8 @@ export const MESSAGES = {
     'tools.logClear': '清空日志',
     'tools.settings': '设置',
     'tools.rotate': '密钥轮换（更换口令）',
-    'tools.rotate.hint': '只更换密钥文件的口令，不重加密数据：主密钥不变，已有 .XUQIAN 文件继续可用。指纹保持不变，便于核验是同一把密钥。',
+    'tools.rotate.hint':
+      '只更换密钥文件的口令，不重加密数据：主密钥不变，已有 .XUQIAN 文件继续可用。指纹保持不变，便于核验是同一把密钥。',
     'tools.rotate.file': '选择 .XUQIANKEY 文件',
     'tools.rotate.old': '当前口令',
     'tools.rotate.new': '新口令',
@@ -351,7 +363,8 @@ export const MESSAGES = {
     'error.CSPRNG_UNAVAILABLE': '当前环境不支持密码学安全随机数，无法继续',
     'error.UNKNOWN': '操作失败，请重试',
     'error.file': '文件读取失败',
-    'compliance': '本工具仅用于合法合规的文件加密与隐私保护，禁止用于非法用途。网站不保存密钥、不保存文件、不提供任何后门，无法找回丢失的密钥。',
+    compliance:
+      '本工具仅用于合法合规的文件加密与隐私保护，禁止用于非法用途。网站不保存密钥、不保存文件、不提供任何后门，无法找回丢失的密钥。',
     'footer.note': '全部运算在你的浏览器本地完成 · 无后端 · 无上传',
   },
   en: {
@@ -359,20 +372,27 @@ export const MESSAGES = {
     'brand.subtitle': "Xu Qi'an's Box",
     'brand.tagline': 'Fully local encryption · files and keys never leave your device',
     'start.title': 'Choose an encryption route',
-    'start.lead': 'The two routes are fully independent: both produce .xuqian files, but their formats and keys are not interchangeable. You can switch at any time.',
+    'start.lead':
+      'The two routes are fully independent: both produce .xuqian files, but their formats and keys are not interchangeable. You can switch at any time.',
     'start.simple.title': 'Standard encryption',
-    'start.simple.desc': 'Industry-standard crypto libraries plus the browser-native WebCrypto: AES-128/256-GCM, ChaCha20-Poly1305, XChaCha20-Poly1305, SM4-GCM, stackable in 1–10 layers.',
+    'start.simple.desc':
+      'Industry-standard crypto libraries plus the browser-native WebCrypto: AES-128/256-GCM, ChaCha20-Poly1305, XChaCha20-Poly1305, SM4-GCM, stackable in 1–10 layers.',
     'start.simple.p1': 'Algorithms come from mature, widely used and audited libraries.',
     'start.simple.p2': 'Supports layer stacking, gzip, the encryption notice, key files and shard recovery.',
     'start.simple.p3': 'Ships a CLI, and browser ↔ CLI interoperability is verified in both directions.',
     'start.simple.best': 'Best for: everyday use where maturity matters most.',
     'start.self.title': 'Self-implemented encryption',
-    'start.self.desc': 'Every algorithm is implemented in this project with no third-party crypto libraries: SHA-256, HMAC-SHA256, PBKDF2, AES, CTR.',
-    'start.self.p1': 'Each algorithm is checked against standard vectors: FIPS 180-4, RFC 4231, FIPS 197, NIST SP 800-38A.',
+    'start.self.desc':
+      'Every algorithm is implemented in this project with no third-party crypto libraries: SHA-256, HMAC-SHA256, PBKDF2, AES, CTR.',
+    'start.self.p1':
+      'Each algorithm is checked against standard vectors: FIPS 180-4, RFC 4231, FIPS 197, NIST SP 800-38A.',
     'start.self.p2': 'Vectors are generated independently by OpenSSL (68 assertions currently green).',
-    'start.self.p3': 'Also includes image watermarking (LSB public/private layers + a visible watermark) and AI detection (metadata + frequency / noise / color / edge statistics).',
-    'start.self.best': 'Best for: inspecting how encryption is implemented, or requiring zero third-party crypto dependencies.',
-    'start.self.pending': 'Note: its .xuqian files are NOT interchangeable with Standard encryption — neither route can decrypt the other.',
+    'start.self.p3':
+      'Also includes image watermarking (LSB public/private layers + a visible watermark) and AI detection (metadata + frequency / noise / color / edge statistics).',
+    'start.self.best':
+      'Best for: inspecting how encryption is implemented, or requiring zero third-party crypto dependencies.',
+    'start.self.pending':
+      'Note: its .xuqian files are NOT interchangeable with Standard encryption — neither route can decrypt the other.',
     'start.self.verified': 'Verified algorithms (against standard test vectors)',
     'start.choose': 'Enter',
     'start.chosen.simple': 'Current: standard encryption',
@@ -388,8 +408,10 @@ export const MESSAGES = {
     'sc.working': 'Working…',
     'sc.loading': 'Loading the self-implemented crypto module…',
     'sc.home.title': 'Self-implemented encryption',
-    'sc.home.lead': 'On this route every algorithm is implemented in this project with no third-party crypto libraries, and each one is checked against standard test vectors.',
-    'sc.home.formatNote': 'Note: the .xuqian files produced here are NOT interchangeable with those from Standard encryption — neither route can decrypt the other.',
+    'sc.home.lead':
+      'On this route every algorithm is implemented in this project with no third-party crypto libraries, and each one is checked against standard test vectors.',
+    'sc.home.formatNote':
+      'Note: the .xuqian files produced here are NOT interchangeable with those from Standard encryption — neither route can decrypt the other.',
     'sc.entry.file': 'Encrypt a file in the self-implemented format, produce a .xuqian and a 128-bit key (shown once).',
     'sc.entry.decrypt': 'Decrypt a self-implemented .xuqian; use "Verify key" first if unsure.',
     'sc.entry.watermark': 'Embed an LSB watermark: the public layer needs no key, the private layer needs WK.',
@@ -399,13 +421,16 @@ export const MESSAGES = {
     'sc.err.needKey': 'Enter a 128-bit key (32 hex characters)',
     'sc.err.needImage': 'Pick an image first',
     'sc.file.title': 'Encrypt a file (self-implemented format)',
-    'sc.file.desc': 'Six steps: random material → derive subkeys → encrypt metadata together with content → chunked AES-CTR → split & reorder shares → whole-file HMAC.',
+    'sc.file.desc':
+      'Six steps: random material → derive subkeys → encrypt metadata together with content → chunked AES-CTR → split & reorder shares → whole-file HMAC.',
     'sc.file.pick': 'Choose the file to encrypt',
     'sc.file.run': 'Encrypt and download',
     'sc.file.key': 'Key (128-bit, shown once)',
-    'sc.file.keyWarning': 'Write this key down now: it is not stored in the file, cannot be retrieved after you leave this page, and without it the file cannot be decrypted.',
+    'sc.file.keyWarning':
+      'Write this key down now: it is not stored in the file, cannot be retrieved after you leave this page, and without it the file cannot be decrypted.',
     'sc.file.saveLocal': 'Also save to the local ciphertext library (ciphertext only — never the key)',
-    'sc.file.slowWarn': 'This route is pure JavaScript without hardware acceleration — measured ≈1.8–2 MB/s, so this file will take about',
+    'sc.file.slowWarn':
+      'This route is pure JavaScript without hardware acceleration — measured ≈1.8–2 MB/s, so this file will take about',
     'sc.file.cancel': 'Cancel',
     'sc.file.cancelled': 'Cancelled — no output file was produced.',
     'sc.file.workerNote': 'Running on a background thread, so the page stays responsive; you can cancel at any time.',
@@ -421,16 +446,19 @@ export const MESSAGES = {
     'sc.decrypt.refresh': 'Refresh',
     'sc.decrypt.use': 'Use',
     'sc.decrypt.delete': 'Delete',
-    'sc.decrypt.localNote': 'The library holds ciphertext only; without the key it is still unreadable, and the key is never stored.',
+    'sc.decrypt.localNote':
+      'The library holds ciphertext only; without the key it is still unreadable, and the key is never stored.',
     'sc.decrypt.exportLib': 'Export whole library',
     'sc.decrypt.importLib': 'Import backup',
     'sc.decrypt.exported': 'Backup exported, entries',
     'sc.decrypt.imported': 'Imported, entries',
-    'sc.decrypt.backupNote': 'The backup holds ciphertext and file names only — no keys. It lets you restore the library after clearing browser data.',
+    'sc.decrypt.backupNote':
+      'The backup holds ciphertext and file names only — no keys. It lets you restore the library after clearing browser data.',
     'sc.decrypt.usage': 'Local library usage',
     'sc.decrypt.usageValue': 'entries / ciphertext total',
     'sc.decrypt.quotaValue': 'browser usage / quota',
-    'sc.decrypt.quotaWarn': 'Local storage is nearly full: export a backup first, then delete entries you no longer need. Nothing is ever deleted automatically.',
+    'sc.decrypt.quotaWarn':
+      'Local storage is nearly full: export a backup first, then delete entries you no longer need. Nothing is ever deleted automatically.',
     'sc.decrypt.source': 'Ciphertext source',
     'sc.decrypt.fromFile': 'local file',
     'sc.decrypt.fromLibrary': 'local library',
@@ -438,7 +466,8 @@ export const MESSAGES = {
     'sc.file.plainSize': 'Plaintext bytes',
     'sc.file.cipherSize': 'Ciphertext bytes',
     'sc.decrypt.title': 'Decrypt (self-implemented format)',
-    'sc.decrypt.desc': 'KEY_CHECK is verified first, then the whole-file MAC; decryption starts only if both pass. Any failure yields one uniform result.',
+    'sc.decrypt.desc':
+      'KEY_CHECK is verified first, then the whole-file MAC; decryption starts only if both pass. Any failure yields one uniform result.',
     'sc.decrypt.pick': 'Choose a .xuqian file',
     'sc.decrypt.key': 'Key',
     'sc.decrypt.keyHint': '32 hex characters; non-hex characters are ignored',
@@ -449,17 +478,20 @@ export const MESSAGES = {
     'sc.decrypt.saved': 'Restored file',
     'sc.decrypt.size': 'Restored bytes',
     'sc.wm.title': 'Image watermark',
-    'sc.wm.desc': 'LSB embedding hides data in the least significant bits of pixels. The public layer is readable by anyone; the private layer requires WK.',
+    'sc.wm.desc':
+      'LSB embedding hides data in the least significant bits of pixels. The public layer is readable by anyone; the private layer requires WK.',
     'sc.wm.pick': 'Choose an image',
     'sc.wm.public': 'Public info (no key needed)',
     'sc.wm.private': 'Private info (needs WK)',
     'sc.wm.key': 'Watermark key WK',
-    'sc.wm.keyHint': 'Leave empty to generate one on embed (it will be shown); the same key is required to extract the private layer',
+    'sc.wm.keyHint':
+      'Leave empty to generate one on embed (it will be shown); the same key is required to extract the private layer',
     'sc.wm.keyPlaceholder': 'Leave empty to auto-generate',
     'sc.wm.embed': 'Embed and download PNG',
     'sc.wm.extract': 'Extract',
     'sc.wm.visible': 'Also add a visible watermark (painted on pixels)',
-    'sc.wm.visibleHint': 'Low end of the SPEC ranges: font = 1% of image width, opacity 15%, margin 3px — "not visible unless you look closely".',
+    'sc.wm.visibleHint':
+      'Low end of the SPEC ranges: font = 1% of image width, opacity 15%, margin 3px — "not visible unless you look closely".',
     'sc.wm.visibleText': 'Visible watermark text',
     'sc.wm.visiblePlaceholder': 'e.g. XUQIAN',
     'sc.wm.position': 'Position',
@@ -472,7 +504,8 @@ export const MESSAGES = {
     'sc.wm.mode': 'Watermark style',
     'sc.wm.mode.corner': 'Single corner/centre watermark',
     'sc.wm.mode.tile': 'Tiled across the whole image (diagonal rows)',
-    'sc.wm.tileHint': 'Like traditional stock-photo protection: repeated at -30° across the entire image; font size and opacity still use the low end of the SPEC ranges.',
+    'sc.wm.tileHint':
+      'Like traditional stock-photo protection: repeated at -30° across the entire image; font size and opacity still use the low end of the SPEC ranges.',
     'sc.wm.tileUnit': 'tiles',
     'sc.wm.visibleNone': 'no visible watermark',
     'sc.wm.tooSmall': 'image too small — the proportional font size is illegible',
@@ -482,7 +515,8 @@ export const MESSAGES = {
     'sc.wm.none': '(none)',
     'sc.wm.locked': 'requires WK',
     'sc.ai.title': 'AI detection',
-    'sc.ai.desc': 'Reads metadata (EXIF / XMP / C2PA / IPTC) and computes frequency, noise, colour and edge statistics for a lead report. JPEG / PNG / WebP are parsed by container structure; HEIC / AVIF use a marker scan only (found means present, not-found does not mean absent).',
+    'sc.ai.desc':
+      'Reads metadata (EXIF / XMP / C2PA / IPTC) and computes frequency, noise, colour and edge statistics for a lead report. JPEG / PNG / WebP are parsed by container structure; HEIC / AVIF use a marker scan only (found means present, not-found does not mean absent).',
     'sc.ai.pick': 'Choose an image',
     'sc.ai.run': 'Run detection',
     'sc.ai.score': 'Score',
@@ -495,14 +529,19 @@ export const MESSAGES = {
     'sc.ai.watermarkTitle': 'Watermark detection',
     'sc.status.title': 'Algorithms & status',
     'sc.status.desc': 'What this route has verified so far, and which gaps remain — stated plainly.',
-    'sc.status.specParams': 'FK is now settled: it refers to the system parameter of the Chinese SM4 standard (GB/T 32907-2016) — an algorithm-internal constant, unrelated to the file format. The 2 bytes at header offset 10 are an ordinary reserved field (RESERVED): always written as 0, and a non-zero value is rejected. The field was renamed from RESERVED_FK so it is no longer confused with the FK of SM4. PBKDF2 test vectors use HMAC-SHA256, per §7 priority (final).',
+    'sc.status.specParams':
+      'FK is now settled: it refers to the system parameter of the Chinese SM4 standard (GB/T 32907-2016) — an algorithm-internal constant, unrelated to the file format. The 2 bytes at header offset 10 are an ordinary reserved field (RESERVED): always written as 0, and a non-zero value is rejected. The field was renamed from RESERVED_FK so it is no longer confused with the FK of SM4. PBKDF2 test vectors use HMAC-SHA256, per §7 priority (final).',
     'sc.status.verified': 'Verified algorithms and modules',
-    'sc.status.verifiedHint': 'Each item is checked against standard test vectors, or covered by round-trip / cross-validation tests.',
-    'sc.status.vectorNote': '15 suites / 234 assertions; vectors are generated independently by OpenSSL; run: pnpm test:selfcrypto',
+    'sc.status.verifiedHint':
+      'Each item is checked against standard test vectors, or covered by round-trip / cross-validation tests.',
+    'sc.status.vectorNote':
+      '15 suites / 234 assertions; vectors are generated independently by OpenSSL; run: pnpm test:selfcrypto',
     'sc.status.gaps': 'Known gaps (stated honestly)',
     'sc.status.gap1': 'AI-detection weights and thresholds are uncalibrated: leads only, never a conclusion.',
-    'sc.status.gap2': 'All three frequency transforms are implemented (8×8 DCT, 2D FFT, Haar DWT) and feed into the frequency score; what is still missing is true PRNU — residual strength only, no multi-image correlation.',
-    'sc.status.gap3': 'The LSB watermark is fragile (breaks under compression, scaling, cropping); metadata scanning handles JPEG/PNG/WebP by container structure, while HEIC/AVIF get marker scanning only (a miss does not prove absence).',
+    'sc.status.gap2':
+      'All three frequency transforms are implemented (8×8 DCT, 2D FFT, Haar DWT) and feed into the frequency score; what is still missing is true PRNU — residual strength only, no multi-image correlation.',
+    'sc.status.gap3':
+      'The LSB watermark is fragile (breaks under compression, scaling, cropping); metadata scanning handles JPEG/PNG/WebP by container structure, while HEIC/AVIF get marker scanning only (a miss does not prove absence).',
     'tab.encrypt': 'Encrypt',
     'tab.decrypt': 'Decrypt',
     'tab.text': 'Text',
@@ -542,9 +581,11 @@ export const MESSAGES = {
     'encrypt.gzip': 'gzip before encrypting',
     'encrypt.gzip.hint': 'Smaller output; decompressed automatically on decrypt',
     'encrypt.encryptMeta': 'Encrypt metadata (hide original file name)',
-    'encrypt.encryptMeta.hint': 'Also encrypts original name, MIME and note — without the key you cannot tell what the file was. When off, these are stored as plaintext in the header',
+    'encrypt.encryptMeta.hint':
+      'Also encrypts original name, MIME and note — without the key you cannot tell what the file was. When off, these are stored as plaintext in the header',
     'encrypt.timestampSalt': 'Timestamp salt (domain separation)',
-    'encrypt.timestampSalt.hint': 'Mixes the creation time into key derivation so one key yields different subkeys per file. ⚠ This does NOT improve security: the timestamp must be stored in cleartext, and a public salt provides no confidentiality',
+    'encrypt.timestampSalt.hint':
+      'Mixes the creation time into key derivation so one key yields different subkeys per file. ⚠ This does NOT improve security: the timestamp must be stored in cleartext, and a public salt provides no confidentiality',
     'encrypt.note': 'Note (stored in the header, visible in plaintext)',
     'encrypt.expires': 'Expiry reminder (optional, informational only)',
     'encrypt.start': 'Start encryption',
@@ -553,7 +594,8 @@ export const MESSAGES = {
     'encrypt.chunk': 'Chunk size',
     'encrypt.chunkHint': 'Large files are chunked automatically with a unique nonce per chunk',
     'key.title': '128-bit master key (your only decryption credential)',
-    'key.warning': 'This key is shown once. It is destroyed the moment you close this dialog and can never be shown again. If you lose it, the file is unrecoverable forever.',
+    'key.warning':
+      'This key is shown once. It is destroyed the moment you close this dialog and can never be shown again. If you lose it, the file is unrecoverable forever.',
     'key.hex': 'Hex (32 chars)',
     'key.base64': 'Base64 (24 chars)',
     'key.fingerprint': 'Key fingerprint (first 8 bytes of SHA-256)',
@@ -575,7 +617,8 @@ export const MESSAGES = {
     'key.passwordMismatch': 'Passwords do not match',
     'key.close': 'I have copied it — close and destroy',
     'key.confirmTitle': 'Key not copied or downloaded yet',
-    'key.confirmBody': 'You have not copied or downloaded the key. Closing destroys it permanently with no recovery. Close anyway?',
+    'key.confirmBody':
+      'You have not copied or downloaded the key. Closing destroys it permanently with no recovery. Close anyway?',
     'key.confirmClose': 'Close and destroy',
     'key.destroyed': 'Key destroyed. Nothing in this site can show it again.',
     'key.notCopied': 'not copied',
@@ -606,15 +649,18 @@ export const MESSAGES = {
     'check.running': 'Verifying…',
     'check.match': 'Key matches — decryption will work',
     'check.mismatch': 'Wrong key or corrupted file',
-    'check.hint': 'Verification reads only the header and the first block. It writes nothing and does not touch the key, so you can confirm your backup before trusting it.',
+    'check.hint':
+      'Verification reads only the header and the first block. It writes nothing and does not touch the key, so you can confirm your backup before trusting it.',
     'check.fingerprint': 'Current key fingerprint',
     'check.hashVerified': 'Full content hash compared (single-block file)',
     'check.firstBlockOnly': 'First block authenticated (multi-block file, no full-hash comparison)',
     'check.needKey': 'Enter a key or upload a .XUQIANKEY file first',
-    'check.mismatchHint': 'Authentication failure cannot separate a wrong key from a modified file, so the conclusion is intentionally uniform.',
+    'check.mismatchHint':
+      'Authentication failure cannot separate a wrong key from a modified file, so the conclusion is intentionally uniform.',
     'check.needFile': 'Select a .XUQIAN file first',
     'check.title': 'Key verification',
-    'check.toolsHint': 'Pick a .XUQIAN file and provide a key to test whether it can open that file — without decrypting or downloading anything.',
+    'check.toolsHint':
+      'Pick a .XUQIAN file and provide a key to test whether it can open that file — without decrypting or downloading anything.',
     'print.button': 'Print offline checklist',
     'print.title': 'XUQIAN offline key checklist',
     'print.subtitle': 'Keep this apart from the key; this page contains no key material',
@@ -624,7 +670,8 @@ export const MESSAGES = {
     'print.gzip': 'gzip before encryption',
     'print.createdAt': 'Created',
     'print.fileName': 'File',
-    'print.warning': 'This checklist contains no key. Store the key separately and offline (paper, offline media, or split across shards).',
+    'print.warning':
+      'This checklist contains no key. Store the key separately and offline (paper, offline media, or split across shards).',
     'print.print': 'Print / save as PDF',
     'text.title': 'Text encryption',
     'text.input': 'Plaintext',
@@ -664,7 +711,8 @@ export const MESSAGES = {
     'tools.logClear': 'Clear log',
     'tools.settings': 'Settings',
     'tools.rotate': 'Key rotation (change passphrase)',
-    'tools.rotate.hint': 'Re-wraps only the key file with a new passphrase — no data is re-encrypted. The master key is unchanged, so existing .XUQIAN files keep working. The fingerprint stays the same for verification.',
+    'tools.rotate.hint':
+      'Re-wraps only the key file with a new passphrase — no data is re-encrypted. The master key is unchanged, so existing .XUQIAN files keep working. The fingerprint stays the same for verification.',
     'tools.rotate.file': 'Choose a .XUQIANKEY file',
     'tools.rotate.old': 'Current passphrase',
     'tools.rotate.new': 'New passphrase',
@@ -678,7 +726,8 @@ export const MESSAGES = {
     'lock.button': 'Lock',
     'lock.buttonHint': 'Lock now: destroy the master key and clear decrypted plaintext',
     'lock.title': 'Session locked',
-    'lock.body': 'After a period of inactivity the master key was destroyed and decrypted plaintext cleared. Re-import your key file (.XUQIANKEY) to continue.',
+    'lock.body':
+      'After a period of inactivity the master key was destroyed and decrypted plaintext cleared. Re-import your key file (.XUQIANKEY) to continue.',
     'lock.unlock': 'Got it, continue',
     'tools.about': 'About and compliance',
     'log.encrypt': 'Encrypt',
@@ -704,7 +753,7 @@ export const MESSAGES = {
     'error.CSPRNG_UNAVAILABLE': 'This environment has no secure random source',
     'error.UNKNOWN': 'Operation failed, please retry',
     'error.file': 'Failed to read the file',
-    'compliance':
+    compliance:
       'This tool is for lawful file encryption and privacy protection only. Never use it for illegal purposes. The site stores no keys and no files, ships no backdoor, and cannot recover a lost key.',
     'footer.note': 'All computation happens locally in your browser · no backend · no upload',
   },
@@ -739,7 +788,13 @@ export function errorMessageKey(error: unknown): MessageKey {
   for (const key of candidates) {
     if (key === `error.${code}`) return key
   }
-  if (code.startsWith('HEADER_') || code.startsWith('MAGIC_') || code.startsWith('BODY_') || code.startsWith('TAG_') || code.startsWith('CHUNK_')) {
+  if (
+    code.startsWith('HEADER_') ||
+    code.startsWith('MAGIC_') ||
+    code.startsWith('BODY_') ||
+    code.startsWith('TAG_') ||
+    code.startsWith('CHUNK_')
+  ) {
     return 'error.FORMAT_INVALID'
   }
   return 'error.UNKNOWN'

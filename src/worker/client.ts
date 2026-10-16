@@ -149,7 +149,10 @@ class CryptoClient {
     return this.#call({ id: ++this.#seq, op: 'key-check', bytes, verifyHash }, 'key-check', [bytes])
   }
 
-  hash(bytes: ArrayBuffer, algorithms: Array<'SHA-256' | 'SHA-512'> = ['SHA-256', 'SHA-512']): Promise<Record<string, string>> {
+  hash(
+    bytes: ArrayBuffer,
+    algorithms: Array<'SHA-256' | 'SHA-512'> = ['SHA-256', 'SHA-512'],
+  ): Promise<Record<string, string>> {
     return this.#call({ id: ++this.#seq, op: 'hash', bytes, algorithms }, 'hash', [bytes]).then((res) => res.digests)
   }
 }

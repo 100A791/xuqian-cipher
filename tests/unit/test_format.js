@@ -114,7 +114,10 @@ await runner.test('段顺序必须是 0/1/2 的排列（越界或重复都拒绝
 })
 
 await runner.test('组装 → 拆分：四段位置与 MAC 覆盖范围正确', () => {
-  const rules = encodeKv([['wm', 'on'], ['layer', 2n]])
+  const rules = encodeKv([
+    ['wm', 'on'],
+    ['layer', 2n],
+  ])
   const payload = fill(20, 0x77)
   const mac = fill(MAC_LEN, 0x99)
   const { bytes, header } = assembleFile({ header: sampleHeader(), rules, payload, mac })
@@ -180,16 +183,38 @@ await runner.test('KV 空块可往返', () => {
 
 await runner.test('KV 拒绝：重复键 / 非法键名 / 未知类型 / 尾部多余字节 / 截断', () => {
   const cases = [
-    ['KV_KEY_DUPLICATE', () => encodeKv([['a', 1], ['a', 2]])],
+    [
+      'KV_KEY_DUPLICATE',
+      () =>
+        encodeKv([
+          ['a', 1],
+          ['a', 2],
+        ]),
+    ],
     ['KV_KEY_INVALID', () => encodeKv([['中文键', 1]])],
     ['KV_KEY_INVALID', () => encodeKv([['', 1]])],
     ['KV_VALUE_TYPE', () => encodeKv([['a', null]])],
     ['KV_VALUE_RANGE', () => encodeKv([['a', -1]])],
-    ['KV_TRAILING_BYTES', () => { const b = encodeKv([['a', 1]]); const c = new Uint8Array(b.length + 1); c.set(b); return decodeKv(c) }],
+    [
+      'KV_TRAILING_BYTES',
+      () => {
+        const b = encodeKv([['a', 1]])
+        const c = new Uint8Array(b.length + 1)
+        c.set(b)
+        return decodeKv(c)
+      },
+    ],
     ['KV_TRUNCATED', () => decodeKv(encodeKv([['a', 1]]).slice(0, 6))],
     // KV 布局：[count(4)][keyLen(1)][key][type(1)][valueLen(4)][value]
     // 单条 ['a',1] 时 type 在偏移 6（不是 5，5 是键字节）
-    ['KV_TYPE_UNKNOWN', () => { const b = encodeKv([['a', 1]]); b[6] = 9; return decodeKv(b) }],
+    [
+      'KV_TYPE_UNKNOWN',
+      () => {
+        const b = encodeKv([['a', 1]])
+        b[6] = 9
+        return decodeKv(b)
+      },
+    ],
   ]
   for (const [expectedCode, fn] of cases) {
     let code = null
@@ -217,7 +242,13 @@ await runner.test('KV 声明超大条目数时被长度下界挡掉（不会长�
 })
 
 await runner.test('元数据白名单：未知键被拒绝', () => {
-  const ok = decodeMetadata(encodeMetadata([['name', 'a.bin'], ['size', 3n], ['mime', 'application/octet-stream']]))
+  const ok = decodeMetadata(
+    encodeMetadata([
+      ['name', 'a.bin'],
+      ['size', 3n],
+      ['mime', 'application/octet-stream'],
+    ]),
+  )
   assertEqual(ok.get('name'), 'a.bin', 'name')
   assertEqual(ok.get('size'), 3n, 'size')
   let code = null

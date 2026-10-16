@@ -118,7 +118,12 @@ export function TextTab() {
             />
           </Field>
           <div className="flex flex-wrap items-center gap-2">
-            <button type="button" className="xq-btn xq-btn-primary" disabled={busy || !plain.trim()} onClick={() => void doEncrypt()}>
+            <button
+              type="button"
+              className="xq-btn xq-btn-primary"
+              disabled={busy || !plain.trim()}
+              onClick={() => void doEncrypt()}
+            >
               {t('text.encrypt')}
             </button>
             <button
@@ -167,7 +172,12 @@ export function TextTab() {
             />
           </Field>
           <div className="flex flex-wrap gap-2">
-            <button type="button" className="xq-btn xq-btn-primary" disabled={busy || !cipher.trim()} onClick={() => void doDecrypt()}>
+            <button
+              type="button"
+              className="xq-btn xq-btn-primary"
+              disabled={busy || !cipher.trim()}
+              onClick={() => void doDecrypt()}
+            >
               {t('text.decrypt')}
             </button>
             <button type="button" className="xq-btn" disabled={!cipher} onClick={() => void copyText(cipher)}>
@@ -227,7 +237,12 @@ export function TextTab() {
               )
             })}
             <div className="flex gap-2 pt-0.5">
-              <button type="button" className="xq-btn flex-1 text-[11px]" disabled={textLayers.length >= 10} onClick={store.addLayer}>
+              <button
+                type="button"
+                className="xq-btn flex-1 text-[11px]"
+                disabled={textLayers.length >= 10}
+                onClick={store.addLayer}
+              >
                 + {t('encrypt.layers')}
               </button>
               <button
@@ -245,9 +260,12 @@ export function TextTab() {
           {info ? <Alert tone="info">{info}</Alert> : null}
           {error ? <Alert tone="danger">{error}</Alert> : null}
           <Alert tone="warn">
-            文本加密同样遵循“密钥只展示一次、关闭即销毁”的规则。密文串以 {PREFIX} 开头，复制给别人前请确认密钥的传递方式同样安全。
+            文本加密同样遵循“密钥只展示一次、关闭即销毁”的规则。密文串以 {PREFIX}{' '}
+            开头，复制给别人前请确认密钥的传递方式同样安全。
           </Alert>
-          <Alert tone="info">文本模式与文件模式共用同一套算法层栈与主密钥规则：换顺序、换算法都会得到完全不同的密文。</Alert>
+          <Alert tone="info">
+            文本模式与文件模式共用同一套算法层栈与主密钥规则：换顺序、换算法都会得到完全不同的密文。
+          </Alert>
         </div>
       </div>
     </Panel>

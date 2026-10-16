@@ -49,7 +49,11 @@ export function residualStrength(luma, width, height) {
     for (let x = 1; x < width - 1; x++) {
       const c = luma[y * width + x]
       residuals[k++] =
-        4 * c - luma[(y - 1) * width + x] - luma[(y + 1) * width + x] - luma[y * width + x - 1] - luma[y * width + x + 1]
+        4 * c -
+        luma[(y - 1) * width + x] -
+        luma[(y + 1) * width + x] -
+        luma[y * width + x - 1] -
+        luma[y * width + x + 1]
     }
   }
   return { std: stdDev(residuals), meanAbs: mean(Array.from(residuals, Math.abs)) }

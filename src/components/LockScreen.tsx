@@ -20,7 +20,12 @@ export function LockScreen() {
         <div className="xq-seal mx-auto h-12 w-12 text-xs leading-tight">许七安</div>
         <h2 className="text-base font-semibold">{t('lock.title')}</h2>
         <p className="text-xs xq-muted">{t('lock.body')}</p>
-        <button type="button" className="xq-btn w-full" data-testid="lock-continue" onClick={() => store.setLocked(false)}>
+        <button
+          type="button"
+          className="xq-btn w-full"
+          data-testid="lock-continue"
+          onClick={() => store.setLocked(false)}
+        >
           {t('lock.unlock')}
         </button>
       </div>

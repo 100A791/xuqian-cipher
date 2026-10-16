@@ -10,7 +10,14 @@
  */
 import { writeFileSync, readFileSync } from 'node:fs'
 
-import { buildPlainKeyFile, buildProtectedKeyFile, masterKeyFromPayload, parseKeyFile, payloadFromBytes, serializeKeyFile } from '../../src/crypto/keyfile.ts'
+import {
+  buildPlainKeyFile,
+  buildProtectedKeyFile,
+  masterKeyFromPayload,
+  parseKeyFile,
+  payloadFromBytes,
+  serializeKeyFile,
+} from '../../src/crypto/keyfile.ts'
 import { MasterKey } from '../../src/crypto/keys.ts'
 import { hexToBytes } from '../../src/crypto/encoding.ts'
 

@@ -231,8 +231,12 @@ try {
   if (!/^[0-9A-F]{64}$/.test(headerJson.meta.h)) problems.push('缺少 SHA-256 哈希')
   if (typeof keyHex !== 'string' || keyHex.length !== 32) problems.push('密钥弹窗未展示 32 位 Hex')
   // gzip 生效的证据：容器内明文（meta.s）应明显小于原始大小（meta.os）
-  if (headerJson.meta.s >= headerJson.meta.os) problems.push(`gzip 未生效（压缩后 ${headerJson.meta.s} >= 原始 ${headerJson.meta.os}）`)
-  const headerText = bytes.subarray(0, 21 + jsonLen).toString('latin1').toLowerCase()
+  if (headerJson.meta.s >= headerJson.meta.os)
+    problems.push(`gzip 未生效（压缩后 ${headerJson.meta.s} >= 原始 ${headerJson.meta.os}）`)
+  const headerText = bytes
+    .subarray(0, 21 + jsonLen)
+    .toString('latin1')
+    .toLowerCase()
   if (keyHex && headerText.includes(keyHex)) problems.push('文件头泄露了主密钥！')
 
   if (problems.length > 0) {
@@ -246,7 +250,11 @@ try {
   console.error('验证脚本出错:', error.message)
   process.exitCode = 1
 } finally {
-  try { ws?.close() } catch {}
+  try {
+    ws?.close()
+  } catch {}
   browser.kill()
-  try { rmSync(workDir, { recursive: true, force: true }) } catch {}
+  try {
+    rmSync(workDir, { recursive: true, force: true })
+  } catch {}
 }

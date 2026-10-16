@@ -18,7 +18,16 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { randomBytes } from 'node:crypto'
 
-import { clickByText, createChecker, launchSession, setInput, sleep, switchTab, uploadFile, waitFor } from './lib/browser-harness.mjs'
+import {
+  clickByText,
+  createChecker,
+  launchSession,
+  setInput,
+  sleep,
+  switchTab,
+  uploadFile,
+  waitFor,
+} from './lib/browser-harness.mjs'
 
 const BASE = process.argv[2] ?? 'http://127.0.0.1:5188/'
 const PORT = 9335
@@ -132,7 +141,8 @@ async function browserSaveRestored(session, expectedName) {
     await new Promise((r) => setTimeout(r, 800));
     return { ok: true, names: window.__xqDownloads };
   `)
-  if (!clicked.ok) return { name: null, path: null, detail: `无还原按钮；候选按钮=${JSON.stringify(clicked.candidates)}` }
+  if (!clicked.ok)
+    return { name: null, path: null, detail: `无还原按钮；候选按钮=${JSON.stringify(clicked.candidates)}` }
   const name = (clicked.names ?? [])[0] ?? null
   if (!name) return { name: null, path: null, detail: '还原按钮存在但未记录到 download 文件名' }
   const path = join(session.downloadDir, name)
@@ -207,7 +217,11 @@ try {
         Boolean(identical),
         identical ? (saved.name ?? '') : (saved.detail ?? `${saved.name ?? '无下载'} → ${saved.path ?? ''}`),
       )
-      reportRows.push({ direction: 'CLI → 浏览器', case: testCase.label, result: identical ? '字节一致' : '解密成功但字节不一致' })
+      reportRows.push({
+        direction: 'CLI → 浏览器',
+        case: testCase.label,
+        result: identical ? '字节一致' : '解密成功但字节不一致',
+      })
     } else {
       reportRows.push({ direction: 'CLI → 浏览器', case: testCase.label, result: '解密失败' })
     }
@@ -224,7 +238,11 @@ try {
       keyFile: cliKeyFile,
     })
     check('浏览器用 CLI 生成的明文 .XUQIANKEY 解密', viaPlainKeyFile.ok, viaPlainKeyFile.detail ?? '')
-    reportRows.push({ direction: 'CLI → 浏览器（密钥文件）', case: '明文 .XUQIANKEY', result: viaPlainKeyFile.ok ? '成功' : '失败' })
+    reportRows.push({
+      direction: 'CLI → 浏览器（密钥文件）',
+      case: '明文 .XUQIANKEY',
+      result: viaPlainKeyFile.ok ? '成功' : '失败',
+    })
 
     const viaProtectedKeyFile = await browserDecrypt(session, {
       cipherPath: firstCipher.path,
@@ -278,7 +296,11 @@ try {
       return algoSelects().length;
     `)
     check('浏览器侧已设为 3 层加密', uiLayers === 3, `实际 ${uiLayers} 层`)
-    reportRows.push({ direction: '浏览器侧设置', case: '3 层加密', result: uiLayers === 3 ? '成功' : `实际 ${uiLayers} 层` })
+    reportRows.push({
+      direction: '浏览器侧设置',
+      case: '3 层加密',
+      result: uiLayers === 3 ? '成功' : `实际 ${uiLayers} 层`,
+    })
 
     await uploadFile(session.cdp, browserSource, 'input[type=file]')
     await waitFor(session.cdp, `document.body.innerText.includes('browser-source.bin')`, 20000, '文件入队')
@@ -290,14 +312,20 @@ try {
       const areas = Array.from(document.querySelectorAll('textarea'));
       return areas.map((el) => el.value.trim()).find((v) => /^[0-9a-f]{32}$/i.test(v)) ?? null;
     `)
-    check('浏览器加密后取得密钥（Hex）', typeof browserKey === 'string' && /^[0-9a-f]{32}$/i.test(browserKey), `${browserKey?.slice(0, 8)}…`)
+    check(
+      '浏览器加密后取得密钥（Hex）',
+      typeof browserKey === 'string' && /^[0-9a-f]{32}$/i.test(browserKey),
+      `${browserKey?.slice(0, 8)}…`,
+    )
 
     await session.cdp.eval(`
       Array.from(document.querySelectorAll('button')).find((el) => el.textContent.includes('下载 .XUQIANKEY')).click();
       return true;
     `)
     await sleep(900)
-    const keyFileName = await session.cdp.eval(`return window.__xqDownloads.find((n) => n.endsWith('.XUQIANKEY')) ?? null;`)
+    const keyFileName = await session.cdp.eval(
+      `return window.__xqDownloads.find((n) => n.endsWith('.XUQIANKEY')) ?? null;`,
+    )
     if (keyFileName) {
       const candidate = join(session.downloadDir, keyFileName)
       for (let i = 0; i < 60 && !existsSync(candidate); i++) await sleep(200)
@@ -356,7 +384,11 @@ try {
     const restored = join(decDir, 'browser-source.bin')
     const identical = dec.status === 0 && existsSync(restored) && readFileSync(restored).equals(browserBytes)
     check('CLI 能解密浏览器产物且字节一致', identical, dec.stderr.trim().split('\n').pop() ?? '')
-    reportRows.push({ direction: '浏览器 → CLI', case: '3 层（AES-128-GCM×3）', result: identical ? '字节一致' : '不一致' })
+    reportRows.push({
+      direction: '浏览器 → CLI',
+      case: '3 层（AES-128-GCM×3）',
+      result: identical ? '字节一致' : '不一致',
+    })
 
     if (browserKeyFile) {
       const dir2 = join(work, 'cli-from-browser-keyfile')
@@ -365,13 +397,29 @@ try {
       const restored2 = join(dir2, 'browser-source.bin')
       const same2 = dec2.status === 0 && existsSync(restored2) && readFileSync(restored2).equals(browserBytes)
       check('CLI 可用浏览器生成的 .XUQIANKEY 解密', same2, dec2.stderr.trim().split('\n').pop() ?? '')
-      reportRows.push({ direction: '浏览器 → CLI（密钥文件）', case: '.XUQIANKEY 交叉', result: same2 ? '成功' : '失败' })
+      reportRows.push({
+        direction: '浏览器 → CLI（密钥文件）',
+        case: '.XUQIANKEY 交叉',
+        result: same2 ? '成功' : '失败',
+      })
     }
 
     const wrongDir = join(work, 'cli-wrong-key')
     mkdirSync(wrongDir, { recursive: true })
-    const wrong = xuqian(['decrypt', browserCipherPath, '--key', 'ffffffffffffffffffffffffffffffff', '--out', wrongDir, '--quiet'])
-    check('CLI 用错误密钥解浏览器产物必须失败', wrong.status !== 0 && /密钥错误或文件损坏/.test(wrong.stderr), wrong.stderr.trim().split('\n').pop() ?? '')
+    const wrong = xuqian([
+      'decrypt',
+      browserCipherPath,
+      '--key',
+      'ffffffffffffffffffffffffffffffff',
+      '--out',
+      wrongDir,
+      '--quiet',
+    ])
+    check(
+      'CLI 用错误密钥解浏览器产物必须失败',
+      wrong.status !== 0 && /密钥错误或文件损坏/.test(wrong.stderr),
+      wrong.stderr.trim().split('\n').pop() ?? '',
+    )
     reportRows.push({ direction: '负例', case: 'CLI 错误密钥', result: wrong.status !== 0 ? '按预期失败' : '意外成功' })
   }
 

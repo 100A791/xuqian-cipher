@@ -3,12 +3,7 @@ import { chacha20poly1305, xchacha20poly1305 } from '@noble/ciphers/chacha.js'
 import { sm4GcmOpen, sm4GcmSeal } from './sm4.ts'
 import { copyBytes } from './zeroize.ts'
 
-export type AlgoId =
-  | 'AES-128-GCM'
-  | 'AES-256-GCM'
-  | 'CHACHA20-POLY1305'
-  | 'XCHACHA20-POLY1305'
-  | 'SM4-GCM'
+export type AlgoId = 'AES-128-GCM' | 'AES-256-GCM' | 'CHACHA20-POLY1305' | 'XCHACHA20-POLY1305' | 'SM4-GCM'
 
 export interface AlgoSpec {
   id: AlgoId
@@ -147,7 +142,11 @@ function webcryptoAes(spec: AlgoSpec): Aead {
 // ---------------------------------------------------------------------------
 
 function nobleAead(
-  construct: (key: Uint8Array, nonce: Uint8Array, aad: Uint8Array) => {
+  construct: (
+    key: Uint8Array,
+    nonce: Uint8Array,
+    aad: Uint8Array,
+  ) => {
     encrypt(p: Uint8Array): Uint8Array
     decrypt(c: Uint8Array): Uint8Array
   },
