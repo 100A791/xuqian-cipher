@@ -1,5 +1,5 @@
 /** 应用外壳：开始页（加密路线二选一）、品牌头、四个主 Tab、主题/语言开关、快捷键、合规页脚。 */
-import { useEffect } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import { useApp, syncDocumentChrome, type TabKey } from './app/store.ts'
 import { useAutoLock } from './app/useAutoLock.ts'
 import { EncryptTab } from './components/EncryptTab.tsx'
@@ -9,12 +9,21 @@ import { ToolsTab } from './components/ToolsTab.tsx'
 import { KeyModal } from './components/KeyModal.tsx'
 import { LockScreen } from './components/LockScreen.tsx'
 import { StartScreen } from './components/StartScreen.tsx'
-import { SelfHome } from './components/selfcrypto/SelfHome.tsx'
-import { SelfFilePage } from './components/selfcrypto/SelfFilePage.tsx'
-import { SelfDecryptPage } from './components/selfcrypto/SelfDecryptPage.tsx'
-import { SelfWatermarkPage } from './components/selfcrypto/SelfWatermarkPage.tsx'
-import { SelfAiPage } from './components/selfcrypto/SelfAiPage.tsx'
-import { SelfStatusPage } from './components/selfcrypto/SelfStatusPage.tsx'
+// 自研加密路线按需加载：开始页还没选路线时，两种路线的代码都会被静态导入 → 选「简单加密」
+// 的用户也要白下载整个自研路线（含 AI 检测的 FFT/DWT）。改成 lazy 后首屏主包从
+// 484 kB 降到约 411 kB（gzip 163 → 137 kB），自研路线拆成约 13 个按需 chunk。
+const SelfHome = lazy(() => import('./components/selfcrypto/SelfHome.tsx').then((m) => ({ default: m.SelfHome })))
+const SelfFilePage = lazy(() => import('./components/selfcrypto/SelfFilePage.tsx').then((m) => ({ default: m.SelfFilePage })))
+const SelfDecryptPage = lazy(() =>
+  import('./components/selfcrypto/SelfDecryptPage.tsx').then((m) => ({ default: m.SelfDecryptPage })),
+)
+const SelfWatermarkPage = lazy(() =>
+  import('./components/selfcrypto/SelfWatermarkPage.tsx').then((m) => ({ default: m.SelfWatermarkPage })),
+)
+const SelfAiPage = lazy(() => import('./components/selfcrypto/SelfAiPage.tsx').then((m) => ({ default: m.SelfAiPage })))
+const SelfStatusPage = lazy(() =>
+  import('./components/selfcrypto/SelfStatusPage.tsx').then((m) => ({ default: m.SelfStatusPage })),
+)
 import { Alert } from './components/ui.tsx'
 
 const TAB_ORDER: TabKey[] = ['encrypt', 'decrypt', 'text', 'tools']
@@ -124,14 +133,14 @@ export function App() {
 
       {/* 自研路线：五个入口 + 状态页（SPEC §5 阶段五），与简单加密的页签完全独立 */}
       {mode === 'self' ? (
-        <>
+        <Suspense fallback={<div className="xq-panel p-4 text-sm xq-muted">{t('sc.loading')}</div>}>
           {selfTab === 'home' ? <SelfHome /> : null}
           {selfTab === 'file' ? <SelfFilePage /> : null}
           {selfTab === 'decrypt' ? <SelfDecryptPage /> : null}
           {selfTab === 'watermark' ? <SelfWatermarkPage /> : null}
           {selfTab === 'ai' ? <SelfAiPage /> : null}
           {selfTab === 'status' ? <SelfStatusPage /> : null}
-        </>
+        </Suspense>
       ) : (
         <>
           <nav className="xq-panel flex gap-1 p-1.5" role="tablist" aria-label="main">

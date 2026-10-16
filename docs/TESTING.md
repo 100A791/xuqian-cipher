@@ -8,7 +8,7 @@
 
 ```bash
 pnpm typecheck     # TypeScript 严格模式类型检查
-pnpm test          # Vitest 单元测试（88 项）
+pnpm test          # Vitest 单元测试（92 项）
 pnpm build         # 类型检查 + 生产构建
 pnpm dev           # 另开终端：启动 http://127.0.0.1:5188/
 pnpm test:cli      # 命令行工具测试（58 项，含与网站共用加密实现的往返）
@@ -26,7 +26,7 @@ pnpm test:all      # 以上全部（推荐在交付前执行）
 
 ---
 
-## 二、单元测试（`src/**/*.test.ts`，88 项）
+## 二、单元测试（`src/**/*.test.ts`，92 项）
 
 ### 2.1 `.XUQIAN` 容器（`container.test.ts`，17 项）
 
@@ -114,6 +114,14 @@ pnpm test:all      # 以上全部（推荐在交付前执行）
 
 `lockNow()` 进入锁定态并清空一次性密钥视图与已解出明文；`setLocked(false)` 可解锁；
 `autoLockMinutes` 夹取到 `0..120` 并取整；元数据加密开关默认开启且可切换。
+
+### 2.9 双语字典完整性（`i18n.test.ts`，4 项）
+
+中英字典键集合完全一致；两侧文案均非空；`translate()` 对每个键都返回真实文案而非键名；
+英文侧与中文侧完全相同（"加了键忘了翻译"）的比例低于 10%。
+
+> 为什么需要：`translate()` 在英文键缺失时会**静默回退到中文**，而 `MessageKey` 类型是从中文表
+> 推导的，TypeScript **不会**拦住"只在中文表加键"。缺一个键的后果是英文界面悄悄冒出中文，没有任何报错。
 
 ---
 

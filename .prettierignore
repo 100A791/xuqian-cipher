@@ -1,0 +1,23 @@
+# 构建产物与生成物：不格式化
+dist/
+public/
+node_modules/
+certs/
+coverage/
+
+# 重要：Markdown 一律不交给 Prettier。
+# 本项目的文档是精心手工排版的散文（表格、引用块、> 提示），
+# Prettier 的 proseWrap 会重排换行，把可读的段落切成破碎的长行。
+*.md
+
+# 锁文件由包管理器维护
+pnpm-lock.yaml
+package-lock.json
+
+# 测试向量是 tools/gen_vectors.js 用 OpenSSL 生成的**固定夹具**，
+# 重新格式化它们只会制造与"算法正确性"无关的 diff。
+tests/vectors/
+
+# 加密产物样例
+*.XUQIAN
+*.XUQIANKEY

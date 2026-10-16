@@ -265,7 +265,7 @@ PWA 离线安装、伪装扩展名、加密笔记、浏览器扩展、时间锁�
 │   └── gen-cert.mjs               # 本地 HTTPS 自签名证书
 └── docs/
     ├── GUIDE.md                   # ★ 分区操作手册（配图版）
-    ├── images/                    # 操作手册截图（21 张，可脚本重新生成）
+    ├── images/                    # 操作手册截图（31 张 = 脚本产出 24 + now-* 现状图 7，可脚本重新生成）
     ├── FORMAT.md                  # .XUQIAN / .XUQIANKEY 格式规范
     ├── SECURITY.md                # 安全模型与风险提示
     ├── TESTING.md                 # 测试用例与验收标准
@@ -276,7 +276,7 @@ PWA 离线安装、伪装扩展名、加密笔记、浏览器扩展、时间锁�
 
 ## 测试与验收
 
-### 单元测试（88 项，Vitest）
+### 单元测试（92 项，Vitest）
 
 ```bash
 pnpm test
