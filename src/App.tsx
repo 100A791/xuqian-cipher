@@ -5,10 +5,13 @@ import { useAutoLock } from './app/useAutoLock.ts'
 import { EncryptTab } from './components/EncryptTab.tsx'
 import { DecryptTab } from './components/DecryptTab.tsx'
 import { TextTab } from './components/TextTab.tsx'
-import { ToolsTab } from './components/ToolsTab.tsx'
 import { KeyModal } from './components/KeyModal.tsx'
 import { LockScreen } from './components/LockScreen.tsx'
 import { StartScreen } from './components/StartScreen.tsx'
+import { UpdateBanner } from './components/UpdateBanner.tsx'
+// 工具箱（Shamir 分片 / 密钥轮换 / 日志 / 设置）不是首屏必经路径，改为按需加载：
+// 与自研路线同一套 lazy 模式，选「加密」的用户不再为工具页付下载成本。
+const ToolsTab = lazy(() => import('./components/ToolsTab.tsx').then((m) => ({ default: m.ToolsTab })))
 // 自研加密路线按需加载：开始页还没选路线时，两种路线的代码都会被静态导入 → 选「简单加密」
 // 的用户也要白下载整个自研路线（含 AI 检测的 FFT/DWT）。改成 lazy 后首屏主包从
 // 484 kB 降到约 411 kB（gzip 163 → 137 kB），自研路线拆成约 13 个按需 chunk。
@@ -144,6 +147,8 @@ export function App() {
         </div>
       </header>
 
+      <UpdateBanner />
+
       {/* 自研路线：五个入口 + 状态页（SPEC §5 阶段五），与简单加密的页签完全独立 */}
       {mode === 'self' ? (
         <Suspense fallback={<div className="xq-panel p-4 text-sm xq-muted">{t('sc.loading')}</div>}>
@@ -174,10 +179,12 @@ export function App() {
           </nav>
 
           <main className="flex-1">
-            {tab === 'encrypt' ? <EncryptTab /> : null}
-            {tab === 'decrypt' ? <DecryptTab /> : null}
-            {tab === 'text' ? <TextTab /> : null}
-            {tab === 'tools' ? <ToolsTab /> : null}
+            <Suspense fallback={<div className="xq-panel p-4 text-sm xq-muted">{t('common.loading')}</div>}>
+              {tab === 'encrypt' ? <EncryptTab /> : null}
+              {tab === 'decrypt' ? <DecryptTab /> : null}
+              {tab === 'text' ? <TextTab /> : null}
+              {tab === 'tools' ? <ToolsTab /> : null}
+            </Suspense>
           </main>
         </>
       )}

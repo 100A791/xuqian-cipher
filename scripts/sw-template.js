@@ -13,11 +13,27 @@ const BUILD = '__BUILD__'
 const PRECACHE = __PRECACHE__
 const CACHE_NAME = `xuqian-${BUILD}`
 
+// 离线手册（纯文本，不含截图，量很小）。这些文件由 sync-docs 复制进 dist/，
+// 不在构建产物流里，所以没法进 __PRECACHE__；改为安装时"尽力而为"地补缓存，
+// 缺任何一篇都不影响离线壳本身（Promise.allSettled）。
+const DOCS = [
+  './docs/index.html',
+  './docs/README.md',
+  './docs/GUIDE.md',
+  './docs/FORMAT.md',
+  './docs/SECURITY.md',
+  './docs/TESTING.md',
+  './docs/KEY-LIFECYCLE.md',
+  './docs/PROJECT-REPORT.md',
+  './docs/PERFORMANCE.md',
+]
+
 self.addEventListener('install', (event) => {
   event.waitUntil(
     (async () => {
       const cache = await caches.open(CACHE_NAME)
       await cache.addAll(PRECACHE)
+      await Promise.allSettled(DOCS.map((url) => cache.add(url)))
     })(),
   )
 })

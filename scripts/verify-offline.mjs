@@ -168,6 +168,18 @@ try {
     JSON.stringify(offlineProbe),
   )
 
+  // 3.5) 离线手册：SW 安装时"尽力而为"预缓存的纯文本文档
+  const docProbe = await cdp.eval(`
+    const res = await fetch('./docs/FORMAT.md');
+    const text = await res.text();
+    return { ok: res.ok, status: res.status, bytes: text.length };
+  `)
+  check(
+    '断网状态下离线手册可读（docs/*.md 已预缓存）',
+    docProbe.ok === true && docProbe.bytes > 500,
+    JSON.stringify(docProbe),
+  )
+
   // 4) 断网状态下加密一段文本：密钥弹窗必须出现
   await switchTab(cdp, '文本')
   await setInput(cdp, '[data-testid=text-plain]', 'OFFLINE-XUQIAN-检查')

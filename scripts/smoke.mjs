@@ -558,7 +558,13 @@ try {
       }
       return true;
     `)
-    await sleep(350)
+    // 自研页面是 lazy chunk：冷启动时 350ms 固定等待不够（本周两次假阳性都栽在这）。
+    // 改成等目标元素真正出现，超时才判失败。
+    if (testId) {
+      await waitFor(cdp, `!!document.querySelector('[data-testid="${testId}"]')`, 15000, `自研路线 ${key} 页元素出现`)
+    } else {
+      await sleep(350)
+    }
     const probe = await cdp.eval(`
       return {
         shell: !!document.querySelector('[data-testid="sc-shell"]'),
