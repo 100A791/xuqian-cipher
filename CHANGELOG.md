@@ -47,6 +47,15 @@
   脚本刻意保持纯 ASCII + CRLF（历史教训：中文注释 + chcp 会让 cmd 把 rem 行当命令执行）。
   调试开关：`XQ_NO_BROWSER=1`（不开浏览器）、`XQ_NO_WINDOW=1`（服务器窗口最小化）。
 
+- **PWA 更新提示条**（`src/components/UpdateBanner.tsx`）。SW 不做 skipWaiting，新版本停在
+  waiting；`src/app/pwa.ts` 在检测到 waiting（注册时已有 / updatefound→installed）时广播
+  `xq-sw-update`，横幅给出「立即刷新 / 稍后」。文案明确提醒：刷新会销毁未备份的密钥；
+  「立即刷新」走的仍是 `beforeunload` 确认，不会绕过密钥保护。
+
+- **离线手册**。SW 安装时在预缓存构建产物之外，"尽力而为"地缓存 `docs/*.md` 纯文本
+  （不含截图，量很小；缺任何一篇不影响离线壳本身）。断网也能查格式规范和安全模型。
+  `verify-offline` 相应加到 **6 项**（断网 `fetch('./docs/FORMAT.md')` 必须可读）。
+
 - **全局错误边界**（`src/components/ErrorBoundary.tsx`）。此前全站没有任何 `ErrorBoundary` /
   `componentDidCatch`，任一路由在渲染期抛异常就会白屏；而本站是加密工具，白屏时用户**无法区分**
   "界面崩了"与"密钥被销毁了"。新的崩溃页把这两件事明确分开，并说明：主密钥仍在 Worker 内存中、
@@ -70,6 +79,11 @@
   与对应脚本 `pnpm format`、`pnpm format:check`、`pnpm lint`、`pnpm lint:fix`。
 
 ### 变更
+
+- **工具箱（ToolsTab）改为按需加载**（`src/App.tsx`）。Shamir 分片 / 密钥轮换 / 日志 / 设置
+  不是首屏必经路径，拆成独立 chunk 后：主包 414.28 → **405.43 kB**（gzip 138.12 → **136.03**），
+  新增 `ToolsTab-*.js` 10.86 kB（gzip 3.92）按需 chunk。四个主 Tab 共用同一个 Suspense 兜底
+  （i18n 键 `common.loading`）。
 
 - **默认调试端口避开 9333**（smoke 9411、interop 9412、header 9413、offline 9414）。
   原因见「修复」第一条。
@@ -175,6 +189,21 @@
 
 ### 工程
 
+- **发布流程**（`scripts/release.mjs`，`pnpm release [patch|minor|major|x.y.z]`）：
+  bump version → 提交 → 打 `vX.Y.Z` tag。两道护栏：工作树必须干净；
+  `CHANGELOG.md` 必须已有 `[x.y.z]` 小节——没有"为什么改"就不发版。
+
+- **pre-push 钩子**（`scripts/hooks/pre-push` + `install-hooks` 现在同时安装两者）：
+  push 前跑 文档同步 → 生产构建 → 离线壳验证。比 pre-commit 重（几十秒）但自包含，
+  不需要开发服务器与浏览器交互。本仓库暂无远端，钩子暂不触发；配上远端即自动生效。
+
+- **Dependabot**（`.github/dependabot.yml`）：npm 与 github-actions 每周检查。
+  本仓库锁定精确版本，所以它只负责提醒，升级仍由维护者手工评估。
+
+- **跨浏览器手工验收清单**（`docs/CROSS-BROWSER-CHECKLIST.md`）：Firefox / Safari 从未
+  被自动化覆盖，这份清单把「验什么、怎么验、已知的引擎差异表」写成文档，
+  与冒烟测试逐项对应。
+
 - **互操作报告确定化**：`docs/interop-report.md` 不再写入运行时间戳与 Node/平台信息（只打印到控制台），
   随机密钥前缀（`ccaadd90…`）在写入前脱敏。连续两次运行产出**完全相同的文件**
   （md5 一致），`pnpm test:all` 不再因为重跑而把工作树弄脏。
@@ -203,11 +232,11 @@
 | 自研路线 | `node tests/unit/run-all.js` | ✅ **15 套 / 234 项** |
 | 文档数字守卫 | `node scripts/check-counts.mjs` | ✅ 通过 |
 | 格式 | `prettier --check .` | ✅ 通过 |
-| 构建 | `vite build` | ✅ 160 模块，主包 **414.28 kB / gzip 138.12 kB**，`sw.js` 2.91 kB |
+| 构建 | `vite build` | ✅ 161 模块，主包 **405.43 kB / gzip 136.03 kB**，`sw.js` 3.55 kB |
 | 端到端冒烟 | `node scripts/smoke.mjs` | ✅ **119 项、失败 0、备注 1**，退出码 0（端口 9411） |
 | 文件头结构 | `verify-header.mjs` | ✅ 通过（端口 9413） |
 | 互操作 | `interop-test.mjs` | ✅ **27/27**（端口 9412，**紧随 header 运行**，未复现旧的"顺序耦合"） |
-| 离线壳 | `verify-offline.mjs` | ✅ **5/5**（真断网后仍能启动并完成文本加密） |
+| 离线壳 | `verify-offline.mjs` | ✅ **6/6**（含断网手册可读） |
 | 收尾 | `netstat` / 进程检查 | ✅ 9411–9414 无 LISTENING；无残留 headless 浏览器 |
 
 ### 此前验证记录（2026-10-16，2.2.0 → 2.3.0 开发期）

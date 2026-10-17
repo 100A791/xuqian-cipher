@@ -12,8 +12,8 @@
  *    跑到这个脚本不会让安装流程失败。
  *
  * 用法：
- *   node scripts/install-hooks.mjs        # 安装/更新
- *   删除：rm .git/hooks/pre-commit
+ *   node scripts/install-hooks.mjs        # 安装/更新 pre-commit + pre-push
+ *   删除：rm .git/hooks/pre-commit .git/hooks/pre-push
  */
 import { chmodSync, copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
@@ -38,25 +38,31 @@ if (!target) {
   process.exit(0)
 }
 
-const source = join(root, 'scripts', 'hooks', 'pre-commit')
-if (!existsSync(source)) {
-  console.error(`[install-hooks] 找不到钩子模板：${source}`)
-  process.exit(1)
-}
-
 mkdirSync(target, { recursive: true })
 
-// 关键：归一化为 LF。不要用 copyFileSync 直接搬——模板在 Windows 上可能是 CRLF。
-const content = readFileSync(source, 'utf8').replace(/\r\n/g, '\n')
-const dest = join(target, 'pre-commit')
-const existed = existsSync(dest)
-writeFileSync(dest, content, 'utf8')
+/** 安装一个钩子模板（强制 LF），返回是否曾存在。 */
+function installHook(name) {
+  const source = join(root, 'scripts', 'hooks', name)
+  if (!existsSync(source)) {
+    console.error(`[install-hooks] 找不到钩子模板：${source}`)
+    process.exitCode = 1
+    return
+  }
+  // 关键：归一化为 LF。不要用 copyFileSync 直接搬——模板在 Windows 上可能是 CRLF。
+  const content = readFileSync(source, 'utf8').replace(/\r\n/g, '\n')
+  const dest = join(target, name)
+  const existed = existsSync(dest)
+  writeFileSync(dest, content, 'utf8')
 
-try {
-  chmodSync(dest, 0o755)
-} catch {
-  // Windows 上 chmod 基本是空操作，失败不影响 git 执行钩子
+  try {
+    chmodSync(dest, 0o755)
+  } catch {
+    // Windows 上 chmod 基本是空操作，失败不影响 git 执行钩子
+  }
+
+  console.log(`[install-hooks] ${existed ? '已更新' : '已安装'}：${dest}`)
 }
 
-console.log(`[install-hooks] ${existed ? '已更新' : '已安装'}：${dest}`)
-console.log('[install-hooks] 跳过本次校验可用：git commit --no-verify')
+installHook('pre-commit')
+installHook('pre-push')
+console.log('[install-hooks] 跳过本次校验可用：git commit --no-verify / git push --no-verify')

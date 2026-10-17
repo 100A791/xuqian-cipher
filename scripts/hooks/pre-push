@@ -1,0 +1,37 @@
+#!/bin/sh
+# XUQIAN 推送前校验（第二道门）。
+#
+# 由 scripts/install-hooks.mjs 复制到 .git/hooks/pre-push（不随仓库版本化）。
+#
+# 设计取舍：pre-commit 已经守住了「快且确定」的四步；这里补的是**会产出真实产物**的
+# 两步 —— 生产构建 + 离线壳验证。它们比提交慢（几十秒），但都自包含：
+# 不需要开发服务器、不需要浏览器交互（verify-offline 自己起 preview 和 headless）。
+# 这样「本地能推出去的」，至少是「构建得出来且断网可用」的。
+#
+# 注意：本仓库目前没有远端（纯本地版本），pre-push 暂时不会被触发；
+# 保留它是因为配上远端的那一刻起它就开始工作，不需要再想起来改。
+#
+# 需要临时绕过时用：git push --no-verify
+
+set -e
+
+if ! command -v node >/dev/null 2>&1; then
+  echo "[pre-push] 找不到 node，跳过校验（请自行确认改动）。"
+  exit 0
+fi
+
+if [ ! -d node_modules ]; then
+  echo "[pre-push] node_modules 不存在，跳过校验（先跑 pnpm install）。"
+  exit 0
+fi
+
+echo "[pre-push] 1/3 文档同步（构建与离线壳的前提） ..."
+node scripts/sync-docs.mjs
+
+echo "[pre-push] 2/3 生产构建 ..."
+node node_modules/vite/bin/vite.js build
+
+echo "[pre-push] 3/3 离线壳验证 ..."
+node scripts/verify-offline.mjs
+
+echo "[pre-push] 全部通过。"

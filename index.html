@@ -11,6 +11,9 @@
     <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
     <!--
       CSP：禁止任何外部资源与外发请求，只允许同源自身资源。
+      connect-src 保留 'self' 而不是收紧为 'none'：dev 模式下 Vite HMR 需要同源
+      WebSocket（'none' 会让每次保存代码都在控制台报 CSP 错）；生产环境应用本身
+      零网络请求，'self' 也不会放行任何第三方域名。
       纯前端应用必须在 HTTPS 下部署（见 README 安全说明）。
       worker-src 'self' blob: 供加密 Worker 使用。
     -->

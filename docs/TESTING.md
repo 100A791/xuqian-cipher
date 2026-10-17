@@ -321,7 +321,7 @@ SHA-256        : 614FA9F89832503A2932950D80D603ED5BEE0F3E060C94FD5CC1A4FE18CDC0E
 
 ---
 
-## 四·补、离线壳验证（`scripts/verify-offline.mjs`，5 项）
+## 四·补、离线壳验证（`scripts/verify-offline.mjs`，6 项）
 
 前提：先 `pnpm build`（脚本发现 `dist/` 不存在时会自动构建一次）。
 
@@ -332,6 +332,7 @@ SHA-256        : 614FA9F89832503A2932950D80D603ED5BEE0F3E060C94FD5CC1A4FE18CDC0E
 | 3 | Service Worker 已接管 | `controller.scriptURL` 指向 `/sw.js`；缓存名形如 `xuqian-<buildId>` |
 | 4 | 断网刷新仍可用 | CDP `Network.emulateNetworkConditions(offline)` 后 `Page.reload`，`#root` 重新挂载 |
 | 5 | 断网仍能加密 | 断网状态下输入文本并点「加密文本」，密钥弹窗必须出现 |
+| 6 | 离线手册可读 | 断网下 `fetch('./docs/FORMAT.md')` 返回 200（SW 安装时已尽力预缓存 docs/*.md 纯文本） |
 
 > 这条套件同时验证了"加密不依赖任何网络"这一产品声明——不是读代码得出的，是真断网跑出来的。
 
@@ -369,7 +370,7 @@ SHA-256        : 614FA9F89832503A2932950D80D603ED5BEE0F3E060C94FD5CC1A4FE18CDC0E
 | 项 | 说明 |
 | --- | --- |
 | 极大文件（> 1 GiB） | 未做流式落盘；受浏览器内存限制 |
-| Firefox / Safari 自动化 | 冒烟脚本只探测 Edge/Chrome；Safari 需手工验证 |
+| Firefox / Safari 自动化 | 冒烟脚本只探测 Edge/Chrome；手工验收照 [CROSS-BROWSER-CHECKLIST.md](CROSS-BROWSER-CHECKLIST.md) 逐项勾 |
 | 剪贴板写入 | headless 环境默认被拒绝，冒烟脚本会走二次确认分支并记录该事实 |
 | IE / 旧版浏览器 | 明确不支持（需要 WebCrypto、Worker、ES2022） |
 | P2 功能 | 伪装扩展名、时间锁、加密笔记、浏览器扩展仍未实现；PWA 离线已实现（见 §四·补），CLI 已实现（`pnpm test:cli`） |

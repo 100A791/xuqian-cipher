@@ -1,0 +1,25 @@
+# 依赖与 Actions 的过期检查（每周一早上）。
+# 本仓库刻意锁定精确版本（见 package.json），所以这里只负责"提醒"，
+# 升级仍由维护者手工评估 —— 自动 bump 对加密项目来说风险大于收益。
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '08:00'
+      timezone: Asia/Shanghai
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '08:00'
+      timezone: Asia/Shanghai
+    open-pull-requests-limit: 3
+    labels:
+      - dependencies
