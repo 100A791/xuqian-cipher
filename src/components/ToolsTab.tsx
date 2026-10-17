@@ -14,11 +14,61 @@ import {
   serializeKeyFile,
 } from '../crypto/keyfile.ts'
 import { errorMessageKey } from '../app/i18n.ts'
+import { APP_VERSION, markCurrent, parseChangelog, splitBold } from '../app/changelog.ts'
+import changelogRaw from '../../CHANGELOG.md?raw'
 import { describeHeader, parseHeader, EXT_KEYFILE, type XuqianHeader } from '../crypto/container.ts'
 import { Alert, Field, Panel } from './ui.tsx'
 import { PassphraseMeter } from './PassphraseMeter.tsx'
 
 const SYMBOLS = '!@#$%^&*()-_=+[]{};:,.?/'
+
+/** 把 CHANGELOG 里的 **粗体** 渲染出来（其余 Markdown 保持原样，纯文本展示）。 */
+function renderBold(text: string) {
+  return splitBold(text).map((part, index) =>
+    part.bold ? <strong key={index}>{part.text}</strong> : <span key={index}>{part.text}</span>,
+  )
+}
+
+/** 更新日志面板：数据源是仓库根 CHANGELOG.md（?raw 打包），当前版本默认展开。 */
+function ChangelogPanel() {
+  const t = useApp((s) => s.t)
+  const versions = useMemo(() => markCurrent(parseChangelog(changelogRaw), APP_VERSION), [])
+  return (
+    <Panel className="space-y-2">
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-semibold">{t('tools.changelog')}</h2>
+        <span className="xq-mono text-[11px] xq-muted">
+          {t('tools.changelog.current')} v{APP_VERSION}
+        </span>
+      </div>
+      <div className="text-[11px] xq-muted">{t('tools.changelog.source')}</div>
+      <div className="space-y-1" data-testid="changelog-list">
+        {versions.map((entry) => (
+          <details key={entry.version} open={entry.current} className="xq-card px-3 py-2" data-testid="changelog-item">
+            <summary className="cursor-pointer text-xs font-medium">
+              v{entry.version}
+              {entry.date ? <span className="xq-muted"> · {entry.date}</span> : null}
+              {entry.current ? <span className="xq-chip ml-2">{t('tools.changelog.thisVersion')}</span> : null}
+            </summary>
+            {entry.summary ? <p className="mt-1 text-[11px] xq-muted">{entry.summary}</p> : null}
+            {entry.sections.map((section, sectionIndex) => (
+              <div key={sectionIndex} className="mt-2">
+                {section.title ? <div className="text-[11px] font-medium">{renderBold(section.title)}</div> : null}
+                <ul className="mt-1 space-y-1">
+                  {section.items.map((item, itemIndex) => (
+                    <li key={itemIndex} className="whitespace-pre-wrap text-[11px] leading-relaxed xq-muted">
+                      {renderBold(item)}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </details>
+        ))}
+      </div>
+    </Panel>
+  )
+}
 
 function randomFrom(chars: string, length: number): string {
   const bytes = new Uint8Array(length)
@@ -491,6 +541,8 @@ export function ToolsTab() {
           日志只保存在本机 localStorage，且写入前会过滤疑似密钥内容，不会上传。
         </div>
       </Panel>
+
+      <ChangelogPanel />
     </div>
   )
 }

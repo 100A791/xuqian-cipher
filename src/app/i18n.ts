@@ -329,6 +329,10 @@ export const MESSAGES = {
     'tools.log': '本地操作日志（不上传）',
     'tools.logEmpty': '暂无记录',
     'tools.logClear': '清空日志',
+    'tools.changelog': '更新日志',
+    'tools.changelog.current': '当前版本',
+    'tools.changelog.thisVersion': '当前运行',
+    'tools.changelog.source': '内容来自仓库 CHANGELOG.md，随构建打包进应用，离线可查。',
     'tools.settings': '设置',
     'tools.rotate': '密钥轮换（更换口令）',
     'tools.rotate.hint':
@@ -729,6 +733,10 @@ export const MESSAGES = {
     'tools.log': 'Local activity log (never uploaded)',
     'tools.logEmpty': 'No entries yet',
     'tools.logClear': 'Clear log',
+    'tools.changelog': 'Changelog',
+    'tools.changelog.current': 'Current version',
+    'tools.changelog.thisVersion': 'running',
+    'tools.changelog.source': 'Rendered from the repository CHANGELOG.md, bundled with the app; available offline.',
     'tools.settings': 'Settings',
     'tools.rotate': 'Key rotation (change passphrase)',
     'tools.rotate.hint':
