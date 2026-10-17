@@ -360,6 +360,9 @@ pnpm build
 # 上传 dist/ 到 Vercel / Cloudflare Pages / Netlify / Nginx / 对象存储
 ```
 
+> 用「发布应用」发布在线链接时，先 `pnpm site:sync` 把 `dist/` 同步到 `publish/` 再发布
+> ——不要直接发布 `dist/`：构建会清空它，连同样式已发布应用的记录一起清掉。
+
 ### 部署清单
 
 - [ ] **启用 HTTPS**（必需：`crypto.subtle` 与 Worker 仅在安全上下文可用）

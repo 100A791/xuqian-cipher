@@ -38,6 +38,7 @@
     "docs:shots": "node scripts/capture-guide.mjs",
     "gen:icons": "node scripts/gen-icons.mjs",
     "release": "node scripts/release.mjs",
+    "site:sync": "node scripts/publish-sync.mjs",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
