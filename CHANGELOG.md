@@ -40,6 +40,13 @@
   真正关浏览器、等端口释放后再删临时 profile。四套浏览器脚本的端口均可用
   `XQ_SMOKE_PORT` / `XQ_INTEROP_PORT` / `XQ_HEADER_PORT` / `XQ_OFFLINE_PORT` 覆盖。
 
+- **一键启动 `start-xuqian.bat`**。双击即完成：检查 node / pnpm（含 Node ≥ 20.19 与 corepack
+  兜底）→ 缺依赖自动 `pnpm install` → 在独立窗口启动 dev server → 轮询到 `200` 后**自动打开
+  浏览器**；端口已在跑时只开浏览器。所有失败分支（缺 node、旧 node、缺 pnpm、安装失败、
+  超时未起）都有可读指引。原 `start-xuqian.cmd` 改为 3 行转发文件，旧快捷方式继续可用。
+  脚本刻意保持纯 ASCII + CRLF（历史教训：中文注释 + chcp 会让 cmd 把 rem 行当命令执行）。
+  调试开关：`XQ_NO_BROWSER=1`（不开浏览器）、`XQ_NO_WINDOW=1`（服务器窗口最小化）。
+
 - **全局错误边界**（`src/components/ErrorBoundary.tsx`）。此前全站没有任何 `ErrorBoundary` /
   `componentDidCatch`，任一路由在渲染期抛异常就会白屏；而本站是加密工具，白屏时用户**无法区分**
   "界面崩了"与"密钥被销毁了"。新的崩溃页把这两件事明确分开，并说明：主密钥仍在 Worker 内存中、

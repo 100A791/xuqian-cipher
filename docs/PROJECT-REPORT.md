@@ -299,12 +299,12 @@ UI：弹密钥窗（展示一次）→ 关闭即销毁；密文落盘为 .xuqian
 | 主站 | `http://127.0.0.1:5188/` |
 | 文档 | `http://127.0.0.1:5188/docs/index.html` |
 | 预览 | `http://127.0.0.1:5189/`（`pnpm preview`） |
-| 启动 | 双击项目根 `start-xuqian.cmd`（关闭窗口即停）；用户「启动」文件夹里有 `xuqian-dev.cmd` 负责登录自启 |
+| 启动 | 双击项目根 `start-xuqian.bat`（自愈安装依赖 → 起服务器 → 自动开浏览器；关闭服务器窗口即停）；同名 `start-xuqian.cmd` 是兼容转发文件；用户「启动」文件夹里的 `xuqian-dev.cmd` 负责登录自启（只起服务器、不开浏览器） |
 | 文档同步 | 改 `docs/` 或 `README.md` 后必须 `pnpm docs:sync`（同步到 `public/docs/` 并校验死链与非 ASCII 锚点） |
-| 一键全量验证 | `pnpm test:all` = docs:sync → typecheck → 单测 → 构建 → CLI → 冒烟 → 文件头 → 互操作 |
+| 一键全量验证 | `pnpm test:all` = docs:sync → 数字守卫 → 格式 → typecheck → 单测 → 构建 → CLI → 冒烟 → 文件头 → 互操作 → 离线壳 |
 | CLI 的 Node 要求 | `bin` 现指向启动器 `cli/xuqian.mjs`：Node ≥ 23.6 直跑 `.ts`，22.6~23.5 自动加 `--experimental-strip-types` 重启，更老的给明确提示（不再抛 `Unknown file extension ".ts"`）。网站本身仍只需 Node ≥ 20.19 |
 
-**环境事实（本机）**：Node 在 `C:\Users\xuqian\AppData\Local\Programs\nodejs`，pnpm 11.7.0。pnpm 11 默认阻止依赖构建脚本，esbuild 被拦会报 `ERR_PNPM_IGNORED_BUILDS` 并让安装以 exit 1 结束（症状是"服务起不来"）；修法已落在 `pnpm-workspace.yaml` 的 `allowBuilds`。**本机没有 git，本目录也不是 git 仓库**——目前没有任何版本控制。
+**环境事实（本机）**：Node 在 `C:\Users\xuqian\AppData\Local\Programs\nodejs`，pnpm 11.7.0。pnpm 11 默认阻止依赖构建脚本，esbuild 被拦会报 `ERR_PNPM_IGNORED_BUILDS` 并让安装以 exit 1 结束（症状是"服务起不来"）；修法已落在 `pnpm-workspace.yaml` 的 `allowBuilds`。**本机已初始化 git 仓库**（2026-10-16 起），提交前钩子跑 数字守卫 → 格式 → 类型 → 单测；目前仍**无远端**，建议尽快推到一个私有远端做备份。
 
 ---
 
@@ -314,7 +314,8 @@ UI：弹密钥窗（展示一次）→ 关闭即销毁；密文落盘为 .xuqian
 
 - v2.1：纯前端加密站全部主体功能、配图手册、文档体系。
 - v2.2：流式引擎、命令行工具、密钥自检、浏览器 ↔ CLI 双向互操作、加密声明（明文前导区）、人可读文件头。
-- 开始页二选一；环境自愈（`start-xuqian.cmd` 缺依赖自动安装）。
+- v2.3：PWA 离线壳（断网可用）、刷新确认（密钥未销毁时防误关）、CI 工作流、浏览器测试端口卫生与真正收尾。
+- 开始页二选一；环境自愈（`start-xuqian.bat` 缺依赖自动安装、缺 node/pnpm 给出指引）。
 - **自研路线 SPEC 阶段零～七全部落地**：算法（5 套向量）→ 文件格式与加解密（含与 OpenSSL 双向交叉验证）→ 图片水印（LSB 公开/私有层 + 有形水印的角落与全图平铺两种样式）→ AI 检测（JPEG/PNG/WebP 结构解析 + HEIC/AVIF 标记扫描；**DCT + FFT + DWT 三种变换**）→ 界面（五个入口）→ 存储与部署（IndexedDB + 整库备份 + dist）→ 测试与验收（15 套 234 项）。
 - 界面与体验闭环：有形水印接入界面并真浏览器量化验证；**大文件加密搬进 Web Worker**（不卡界面 + 真实分阶段进度 + 可取消）。
 
@@ -389,7 +390,7 @@ SPEC 第 9 节列了 9 项待确认。用户明确授权「后续阶段直接做
 
 | 场景 | 做法 |
 | --- | --- |
-| 服务打不开 | 双击 `start-xuqian.cmd`；或在用户「启动」文件夹里确认 `xuqian-dev.cmd` 存在 |
+| 服务打不开 | 双击 `start-xuqian.bat`（会先自检 node/pnpm/依赖并给出指引）；或直接 `pnpm dev` |
 | 依赖坏了（缺 `node_modules`） | `pnpm install`（`pnpm-workspace.yaml` 已设 `allowBuilds`） |
 | 文档链接失效 | `pnpm docs:sync`（会报出具体死链） |
-| 代码改坏 | **无版本控制**：目前只能靠人工比对；建议尽快补 git 或备份脚本 |
+| 代码改坏 | git 回滚（本机仓库自 2026-10-16 起有提交记录）；尚未推远端，建议尽快补 |

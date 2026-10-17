@@ -2,6 +2,10 @@
 # 而 sh 脚本带 CRLF 会报 "\r: command not found" 这类难懂的错。
 scripts/hooks/* text eol=lf
 
+# Windows 批处理必须 CRLF：LF-only 的 .bat 在部分 cmd 版本里会解析错乱（goto/label）。
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
 # 说明：这里**故意不写 `* text=auto`**。
 # 全仓归一化会一次性重写上百个文件的行尾，与本项目「改动必须可审阅」的习惯冲突。
 # 现存 CRLF/LF 混用（155 个文件里 12 个是 CRLF）由 core.autocrlf=true 在提交时归一化，

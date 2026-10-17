@@ -61,6 +61,10 @@ pnpm dev:https
 # → https://127.0.0.1:5443/
 ```
 
+> Windows 用户可以直接双击项目根的 **`start-xuqian.bat`**：
+> 自动检查 node / pnpm、缺依赖时自动安装、启动服务器并**自动打开浏览器**；
+> 关闭弹出的"XUQIAN dev server"窗口即停止服务。同名 `start-xuqian.cmd` 是给旧快捷方式用的转发文件。
+
 > 端口 3000 / 3080 / 3081 已被其他服务占用，本项目默认使用 **5188**（开发）与 **5189**（预览）。
 > `localhost` 属于浏览器认可的安全上下文，`crypto.subtle`、Web Worker、剪贴板 API 均可正常使用。
 

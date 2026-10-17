@@ -403,7 +403,7 @@ SPEC 阶段六原文：「纯前端方案写 indexeddb.js 存密文。带后端�
 | --- | --- |
 | `storage/indexeddb.js` 存密文 | ✅ `src/selfcrypto/storage/indexeddb.js` + 界面接入（加密页可存库、解密页可从库选）+ **整库导出/导入备份**（D36） |
 | `storage/file_io.js`（带后端方案） | ❌ **有意不做**（D28）：部署形态已定纯前端无后端 |
-| 配置本地静态服务器 | ✅ `start-xuqian.cmd`（dev 5188）+ `vite preview`（dist 5189），阶段六自检里实起过一次 |
+| 配置本地静态服务器 | ✅ `start-xuqian.bat`（dev 5188，一键启动并开浏览器）+ `vite preview`（dist 5189），阶段六自检里实起过一次 |
 | 打包 dist 目录 | ✅ `pnpm build` → `dist/`，烟雾测试含 `dist/index.html` 存在性断言 |
 | `third` 目录留空 | ✅ 建目录 + README 说明；并把约束写成机械校验的测试（D29） |
 
