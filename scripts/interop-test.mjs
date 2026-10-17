@@ -30,7 +30,10 @@ import {
 } from './lib/browser-harness.mjs'
 
 const BASE = process.argv[2] ?? 'http://127.0.0.1:5188/'
-const PORT = 9335
+// 端口可用 XQ_INTEROP_PORT 覆盖。原先固定 9335 / 9336 只是"端口分工"，并没有解决
+// 「等待超时: 页面加载完成」——那个问题的根因是端口被 IDE 的预览浏览器占用，
+// 目前已由 scripts/lib/devtools.mjs 的 assertPortFree() 在启动前拦下。
+const PORT = Number(process.env.XQ_INTEROP_PORT ?? 9412)
 const ROOT = process.cwd()
 const CLI = join(ROOT, 'cli', 'xuqian.ts')
 const KEEP = process.env.XQ_INTEROP_KEEP === '1'

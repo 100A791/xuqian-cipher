@@ -6,21 +6,13 @@
  * 避免两处重复维护同一套 CDP 管道。
  */
 import { spawn } from 'node:child_process'
-import { existsSync, mkdtempSync, mkdirSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-const EDGE_PATHS = [
-  'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
-  'C:/Program Files/Microsoft/Edge/Application/msedge.exe',
-  'C:/Program Files/Google/Chrome/Application/chrome.exe',
-  'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe',
-]
+import { assertPortFree, closeBrowser, findBrowser } from './devtools.mjs'
 
-export function findBrowser() {
-  for (const path of EDGE_PATHS) if (existsSync(path)) return path
-  return null
-}
+export { findBrowser }
 
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
@@ -43,6 +35,11 @@ export class Cdp {
         cdp.#pending.delete(msg.id)
         if (msg.error) reject(new Error(msg.error.message))
         else resolve(msg.result)
+        return
+      }
+      // beforeunload 确认框（密钥未销毁时刷新会弹）：自动化里一律接受，避免 reload 被卡住
+      if (msg.method === 'Page.javascriptDialogOpening') {
+        cdp.send('Page.handleJavaScriptDialog', { accept: true }).catch(() => {})
       }
     })
     return cdp
@@ -195,9 +192,12 @@ export async function waitForDownload(downloadDir, name, timeoutMs = 20000) {
  * 启动一个 headless 浏览器并连上页面，返回 { browser, cdp, workDir, profileDir, downloadDir, base }。
  * 调用方负责在 finally 里 await teardown()。
  */
-export async function launchSession({ base, port = 9333, windowSize = '1280,900' }) {
+export async function launchSession({ base, port = 9412, windowSize = '1280,900' }) {
   const browserPath = findBrowser()
   if (!browserPath) throw new Error('未找到 Edge/Chrome 浏览器可执行文件')
+
+  // 端口被占用时直接失败：曾经因为连到 IDE 的预览浏览器而报「等待超时: 页面加载完成」
+  await assertPortFree(port)
 
   const workDir = mkdtempSync(join(tmpdir(), 'xuqian-e2e-'))
   const profileDir = join(workDir, 'profile')
@@ -215,6 +215,7 @@ export async function launchSession({ base, port = 9333, windowSize = '1280,900'
       '--no-default-browser-check',
       `--window-size=${windowSize}`,
       '--disable-features=Translate,MediaRouter',
+      ...(process.env.CI ? ['--no-sandbox', '--disable-dev-shm-usage'] : []),
       base,
     ],
     { stdio: 'ignore' },
@@ -236,7 +237,7 @@ export async function launchSession({ base, port = 9333, windowSize = '1280,900'
     await sleep(250)
   }
   if (!ready) {
-    browser.kill()
+    await closeBrowser(null, browser, port)
     throw new Error('DevTools 端口未就绪')
   }
 
@@ -244,7 +245,7 @@ export async function launchSession({ base, port = 9333, windowSize = '1280,900'
   const page =
     targets.find((t) => t.type === 'page' && t.url.startsWith('http')) ?? targets.find((t) => t.type === 'page')
   if (!page) {
-    browser.kill()
+    await closeBrowser(null, browser, port)
     throw new Error('找不到页面目标')
   }
 
@@ -272,8 +273,12 @@ export async function launchSession({ base, port = 9333, windowSize = '1280,900'
     downloadDir,
     fixtureDir,
     teardown: async () => {
-      cdp.close()
-      browser.kill()
+      await closeBrowser(cdp, browser, port)
+      try {
+        rmSync(workDir, { recursive: true, force: true })
+      } catch {
+        /* Windows 上可能仍有句柄，忽略 */
+      }
     },
     /** 刷新页面并重新挂载补丁（用于"换设备"场景）。 */
     reload: async () => {

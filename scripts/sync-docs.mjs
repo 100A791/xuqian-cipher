@@ -11,7 +11,7 @@
  *   1. 文档之间 / 文档到截图的相对链接是否全部指向真实存在的文件；
  *   2. 是否残留了非 ASCII 锚点（很多 Markdown 渲染器不支持中文锚点）。
  */
-import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmdirSync, unlinkSync, writeFileSync } from 'node:fs'
 import { dirname, extname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -78,9 +78,37 @@ if (problems.length > 0) {
 }
 
 // 同步到 public/docs/（截图放在 public/docs/images/，因此文档里的 images/xxx.png 相对路径可直接生效）
-rmSync(outDir, { recursive: true, force: true })
+//
+// ⚠ 这里刻意**不用** rmSync(outDir, { recursive: true })。
+// 那是"先删整棵树、再往里拷"：只要删除被中断（Windows 上目录被 dev server 占用、
+// 或 safe-delete 一类的 shim 中止 trash），public/docs 就会只剩半截，而且失败发生在复制之前。
+// 2026-10-17 实测踩过两次：一次 Node 22 + shim，一次 vite dev 正在运行。
+// 现在改为**逐文件覆盖 + 清理本次没有产出的旧文件**：任何时刻目录里都保留着上一版完整副本。
 mkdirSync(join(outDir, 'images'), { recursive: true })
 
+/**
+ * 读写式复制（而不是 cpSync）。
+ *
+ * 原因：Node 22 下本机注入了 `node-brokered-fs-shim`，它包装的 cpSync 在目标文件已存在时
+ * 会先 unlink 再拷，而 unlink 会以 `errno 0 / The operation completed successfully` 失败。
+ * 这里的目标都是我们自己生成的小文件（Markdown / PNG），readFileSync + writeFileSync 直接覆盖，
+ * 既绕开 shim，也不会出现"先删后写"的中间态。
+ */
+function copyFile(src, dest) {
+  mkdirSync(dirname(dest), { recursive: true })
+  writeFileSync(dest, readFileSync(src))
+}
+
+function copyTree(srcDir, destDir) {
+  for (const entry of readdirSync(srcDir, { withFileTypes: true })) {
+    const src = join(srcDir, entry.name)
+    const dest = join(destDir, entry.name)
+    if (entry.isDirectory()) copyTree(src, dest)
+    else copyFile(src, dest)
+  }
+}
+
+const expected = new Set(['index.html'])
 let copied = 0
 for (const rel of docFiles) {
   const src = resolve(root, rel)
@@ -89,15 +117,21 @@ for (const rel of docFiles) {
     continue
   }
   // README 放在 public/docs/README.md，docs/*.md 保持同名
-  const dest = join(outDir, rel.replace(/^docs\//, ''))
-  mkdirSync(dirname(dest), { recursive: true })
-  cpSync(src, dest)
+  const destRel = rel.replace(/^docs\//, '')
+  copyFile(src, join(outDir, destRel))
+  expected.add(destRel)
   copied++
 }
 
 const imagesDir = resolve(root, 'docs', 'images')
 if (existsSync(imagesDir)) {
-  cpSync(imagesDir, join(outDir, 'images'), { recursive: true })
+  for (const entry of readdirSync(imagesDir, { withFileTypes: true })) {
+    const src = join(imagesDir, entry.name)
+    const dest = join(outDir, 'images', entry.name)
+    if (entry.isDirectory()) copyTree(src, dest)
+    else copyFile(src, dest)
+    expected.add(`images/${entry.name}`)
+  }
 }
 
 // 生成一个简单的索引页，方便在浏览器里点进各篇文档
@@ -139,4 +173,44 @@ const index = `<!doctype html>
 `
 writeFileSync(join(outDir, 'index.html'), index, 'utf8')
 
-console.log(`[sync-docs] 已同步 ${copied} 篇文档 + 截图到 public/docs/（链接校验通过）`)
+// 清理本次没有产出的旧文件（比如改名/删除的截图）。只删单个文件，不碰目录树。
+function walkFiles(dir, prefix = '') {
+  const out = []
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const rel = prefix ? `${prefix}/${entry.name}` : entry.name
+    if (entry.isDirectory()) out.push(...walkFiles(join(dir, entry.name), rel))
+    else out.push(rel)
+  }
+  return out
+}
+let pruned = 0
+for (const rel of walkFiles(outDir)) {
+  if (expected.has(rel)) continue
+  try {
+    unlinkSync(join(outDir, rel))
+    pruned++
+  } catch {
+    /* 删不掉就留着，不影响本次同步 */
+  }
+}
+
+// 顺带清掉空目录（同样只删空目录，不做递归删除）
+function pruneEmptyDirs(dir) {
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue
+    const child = join(dir, entry.name)
+    pruneEmptyDirs(child)
+    if (readdirSync(child).length === 0) {
+      try {
+        rmdirSync(child)
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+}
+pruneEmptyDirs(outDir)
+
+console.log(
+  `[sync-docs] 已同步 ${copied} 篇文档 + 截图到 public/docs/（链接校验通过${pruned > 0 ? `，清理 ${pruned} 个旧文件` : ''}）`,
+)

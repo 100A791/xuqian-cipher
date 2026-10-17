@@ -25,14 +25,13 @@ import { existsSync, mkdtempSync, readFileSync, writeFileSync, rmSync } from 'no
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
+import { assertPortFree, closeBrowser, findBrowser } from './lib/devtools.mjs'
+
 const BASE = process.argv[2] ?? 'http://127.0.0.1:5188/'
-const PORT = 9333
-const EDGE_PATHS = [
-  'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
-  'C:/Program Files/Microsoft/Edge/Application/msedge.exe',
-  'C:/Program Files/Google/Chrome/Application/chrome.exe',
-  'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe',
-]
+// 端口可用 XQ_SMOKE_PORT 覆盖。默认 9411 而不是 9333：本机实测 9333 会被 IDE 内置的
+// headless 预览浏览器（profile 名 wbcdp_*）占用，而"占用"的表现是脚本安静地连到它的
+// about:blank 上、等 60 秒后报「等待超时: 页面加载完成」。详见 lib/devtools.mjs 顶部注释。
+const PORT = Number(process.env.XQ_SMOKE_PORT ?? 9411)
 
 const results = []
 /**
@@ -46,11 +45,6 @@ const results = []
 function check(name, ok, detail = '', soft = false) {
   results.push({ name, ok, detail, soft })
   console.log(`${ok ? 'PASS' : soft ? 'NOTE' : 'FAIL'} ${name}${detail ? ` — ${detail}` : ''}`)
-}
-
-function findBrowser() {
-  for (const path of EDGE_PATHS) if (existsSync(path)) return path
-  return null
 }
 
 /**
@@ -121,6 +115,12 @@ class Cdp {
         cdp.#pending.delete(msg.id)
         if (msg.error) reject(new Error(msg.error.message))
         else resolve(msg.result)
+        return
+      }
+      // beforeunload 的确认框（密钥未销毁时刷新会弹）。自动化里一律"确认离开"；
+      // 真实用户看到的是浏览器自己的提示文案。
+      if (msg.method === 'Page.javascriptDialogOpening') {
+        cdp.send('Page.handleJavaScriptDialog', { accept: true }).catch(() => {})
       }
     })
     return cdp
@@ -329,6 +329,14 @@ if (!browserPath) {
 // 开跑前先清场：遗留实例会让这次运行连到旧页面，表现成静默挂死（见 killStrayBrowsers 注释）
 killStrayBrowsers()
 
+// 端口被别人占着时**直接失败**，不要连上去装作是自己的浏览器（2026-10-17 的根因）
+try {
+  await assertPortFree(PORT, 'XQ_SMOKE_PORT')
+} catch (error) {
+  console.error(`[smoke] ${error instanceof Error ? error.message : String(error)}`)
+  process.exit(1)
+}
+
 const workDir = mkdtempSync(join(tmpdir(), 'xuqian-smoke-'))
 const profileDir = join(workDir, 'profile')
 const downloadDir = join(workDir, 'downloads')
@@ -382,6 +390,8 @@ const browser = spawn(
     '--no-default-browser-check',
     '--disable-extensions',
     '--window-size=1280,900',
+    // CI 的容器里跑 headless Chromium 需要这两个开关；本地不加，行为不变
+    ...(process.env.CI ? ['--no-sandbox', '--disable-dev-shm-usage'] : []),
     BASE,
   ],
   { stdio: 'ignore' },
@@ -1847,8 +1857,10 @@ try {
   check('冒烟流程执行', false, error instanceof Error ? error.message : String(error))
   exitCode = 1
 } finally {
-  cdp?.close()
-  browser.kill()
+  // 必须真正关掉浏览器（CDP Browser.close）并等端口释放，再删临时 profile。
+  // 原来的 cdp.close() + browser.kill() 在 Windows 上只杀启动器，浏览器本体仍在，
+  // 而下一行 rmSync 会把它的 profile 删掉 —— 下一次运行更容易命中"陈旧实例"。
+  await closeBrowser(cdp, browser, PORT)
   try {
     rmSync(workDir, { recursive: true, force: true })
   } catch {
