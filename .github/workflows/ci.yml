@@ -1,0 +1,117 @@
+# CI：把「口头约定」变成每次提交都会跑的断言。
+#
+# 分工：
+# - quality：静态检查 + 单元测试 + 构建（每次 push / PR 都跑）。这里的 Node 版本刻意用 22，
+#   与 README 的 engines（>=20.19）保持同一代；24 的差异由 e2e 覆盖。
+# - e2e：真浏览器套件（手动触发）。它需要下载/运行 Chromium，跑得慢，且历史上有过时序抖动，
+#   所以不放在每次 PR 的必经路径上。触发方式：Actions → CI → Run workflow。
+#
+# 说明：本文件写于无法联网的本地环境，**尚未在 GitHub Actions 上实跑过**；
+# 第一次上线时请重点看 `pnpm test:offline` 依赖的 preview 与服务注册是否按预期工作。
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: quality（Node 22 · 门禁）
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: 安装依赖
+        run: pnpm install --frozen-lockfile
+
+      - name: 文档数字守卫
+        run: pnpm test:counts
+
+      - name: ESLint
+        run: pnpm lint
+
+      - name: Prettier
+        run: pnpm format:check
+
+      - name: 类型检查
+        run: pnpm typecheck
+
+      - name: 单元测试
+        run: pnpm test
+
+      - name: 构建
+        run: pnpm build
+
+      - name: 上传产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist
+          retention-days: 7
+
+  e2e:
+    name: e2e（真浏览器 · 手动触发）
+    if: github.event_name == 'workflow_dispatch'
+    needs: quality
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: 安装依赖
+        run: pnpm install --frozen-lockfile
+
+      - name: 构建
+        run: pnpm build
+
+      - name: 启动 preview
+        run: |
+          nohup pnpm preview > /tmp/preview.log 2>&1 &
+          for i in $(seq 1 40); do
+            if curl -sf http://127.0.0.1:5189/ > /dev/null; then break; fi
+            sleep 1
+          done
+          cat /tmp/preview.log
+
+      - name: 端到端冒烟
+        run: node scripts/smoke.mjs http://127.0.0.1:5189/
+        env:
+          XQ_SMOKE_PORT: 9411
+          CI: true
+
+      - name: 文件头结构
+        run: node scripts/verify-header.mjs http://127.0.0.1:5189/
+        env:
+          XQ_HEADER_PORT: 9413
+          CI: true
+
+      - name: 浏览器 ↔ CLI 互操作
+        run: node scripts/interop-test.mjs http://127.0.0.1:5189/
+        env:
+          XQ_INTEROP_PORT: 9412
+          CI: true
+
+      - name: 离线壳
+        run: node scripts/verify-offline.mjs
+        env:
+          XQ_OFFLINE_PORT: 9414
+          XQ_PREVIEW_PORT: 5190
+          CI: true

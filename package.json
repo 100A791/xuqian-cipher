@@ -1,7 +1,7 @@
 {
   "name": "xuqian-cipher",
   "private": true,
-  "version": "2.2.0",
+  "version": "2.3.0",
   "description": "XUQIAN 加密站 / 许七安密匣 — 纯前端本地文件加密工具",
   "type": "module",
   "bin": {
@@ -33,13 +33,15 @@
     "test:smoke": "node scripts/smoke.mjs",
     "test:header": "node scripts/verify-header.mjs",
     "test:interop": "node scripts/interop-test.mjs",
+    "test:offline": "node scripts/verify-offline.mjs",
     "test:counts": "node scripts/check-counts.mjs",
     "docs:shots": "node scripts/capture-guide.mjs",
+    "gen:icons": "node scripts/gen-icons.mjs",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test:all": "npm run docs:sync && npm run test:counts && npm run format:check && npm run typecheck && npm run test && npm run build && npm run test:cli && npm run test:smoke && npm run test:header && npm run test:interop",
+    "test:all": "npm run docs:sync && npm run test:counts && npm run format:check && npm run typecheck && npm run test && npm run build && npm run test:cli && npm run test:smoke && npm run test:header && npm run test:interop && npm run test:offline",
     "bench": "node scripts/benchmark.mjs"
   },
   "dependencies": {
@@ -74,5 +76,6 @@
   },
   "engines": {
     "node": ">=20.19"
-  }
+  },
+  "packageManager": "pnpm@11.7.0"
 }

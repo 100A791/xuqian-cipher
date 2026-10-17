@@ -159,8 +159,19 @@ class CryptoClient {
 
 export const cryptoClient = new CryptoClient()
 
-// 页面卸载时主动请求销毁（浏览器随后会回收整个 Worker）
+// 页面卸载：只要还有未销毁的密钥，就先让浏览器弹一次确认框。
+//
+// 为什么：刷新/关闭标签页是唯一会让密钥**永久消失**的操作（Worker 里的字节随之回收，
+// 没有任何恢复路径）。误按 F5 的代价不可逆，值得多一次确认。
+//
+// 注意：这里**不能**提前调用 destroyKeySync()——用户可能点"取消"留在页面上，
+// 那时密钥必须还在。真正的销毁放在 pagehide：页面确实要走了，再尽力通知 Worker 覆写。
 if (typeof window !== 'undefined') {
+  window.addEventListener('beforeunload', (event) => {
+    if (!cryptoClient.keyPresent) return
+    event.preventDefault()
+    // 现代浏览器忽略自定义文案，但 Chrome 仍要求设置 returnValue 才会弹框
+    event.returnValue = ''
+  })
   window.addEventListener('pagehide', () => cryptoClient.destroyKeySync())
-  window.addEventListener('beforeunload', () => cryptoClient.destroyKeySync())
 }

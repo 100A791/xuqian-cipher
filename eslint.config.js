@@ -52,6 +52,22 @@ export default tseslint.config(
     },
   },
 
+  // Service Worker 模板：构建时注入，运行在 service worker 全局环境
+  {
+    files: ['scripts/sw-template.js'],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: 'script',
+      globals: {
+        ...globals.browser,
+        ...(globals.serviceworker ?? {}),
+        self: 'readonly',
+        caches: 'readonly',
+        clients: 'readonly',
+      },
+    },
+  },
+
   // Node 侧：测试 / 脚本 / 命令行工具 / 配置文件
   {
     files: ['scripts/**/*.{mjs,js}', 'tests/**/*.js', 'tools/**/*.js', 'cli/**/*.{ts,mjs}', '*.{js,mjs,ts}'],
