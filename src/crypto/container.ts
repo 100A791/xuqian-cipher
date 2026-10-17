@@ -55,6 +55,10 @@ export const TAG_BYTES = 16
 export const HEADER_FLAG_GZIP = 2 // 明文在加密前做过 gzip
 export const HEADER_FLAG_ENC_META = 4 // 标识性元数据已加密（见 meta.x）
 export const HEADER_FLAG_TS_SALT = 8 // 把文件创建时间戳并入了密钥派生的域分离串（不提升安全性，见下）
+// 时间锁：meta.exp（过期）/ meta.nbf（生效）由解密端**强制执行**——
+// 在 Worker 里于任何密文块被解开之前，用当前时间戳与这两个值比较，不满足直接拒绝。
+// 局限（如实记录）：验证基于本机时钟，改系统时间即可绕过；纯前端没有可信时间源。
+export const HEADER_FLAG_TIMELOCK = 16
 
 /**
  * 「时间戳附加盐」的派生上下文。
@@ -96,6 +100,8 @@ export interface XuqianMeta {
   os?: number
   /** 用户备注 */
   c?: string
+  /** 生效时间（epoch ms）：时间锁开启时，早于该时刻拒绝解密（"到某个时间才能解密"） */
+  nbf?: number
   /** 明文声明的 UTF-8 字节数。
    *  新格式：明文前导区里声明的长度（供校验）；
    *  旧格式：加密内容开头前置声明的长度（供解密后剥离）。 */
@@ -105,7 +111,7 @@ export interface XuqianMeta {
   nh?: string
   /** 加密声明文本（**仅旧格式**：声明曾前置在加密内容内部，此处存其原文） */
   no?: string
-  /** 到期提醒时间（epoch ms，纯提示） */
+  /** 到期时间（epoch ms）。旧格式=仅提示；新格式（flags 含 0x10 时间锁）=晚于该时刻拒绝解密 */
   exp?: number
   /** 伪装扩展名提示（P2） */
   as?: string
@@ -598,6 +604,7 @@ export function describeHeader(header: XuqianHeader): Array<{ key: string; value
   if (typeof meta.t === 'number') rows.push({ key: 'createdAt', value: new Date(meta.t).toISOString() })
   if (meta.k) rows.push({ key: 'contentKind', value: meta.k })
   if (typeof meta.exp === 'number') rows.push({ key: 'expiresAt', value: new Date(meta.exp).toISOString() })
+  if (typeof meta.nbf === 'number') rows.push({ key: 'notBefore', value: new Date(meta.nbf).toISOString() })
   if (typeof meta.nl === 'number' && meta.nl > 0) {
     rows.push({ key: 'noticeBytes', value: `${meta.nl} B（解密时自动剥离）` })
   }

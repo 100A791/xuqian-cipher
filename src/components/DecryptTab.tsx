@@ -6,7 +6,7 @@ import { bytesToHex } from '../crypto/encoding.ts'
 import { zeroize } from '../crypto/zeroize.ts'
 import { readPreamble } from '../crypto/banner.ts'
 import { useApp } from '../app/store.ts'
-import { errorMessageKey } from '../app/i18n.ts'
+import { errorMessageKey, type MessageKey } from '../app/i18n.ts'
 import { cryptoClient } from '../worker/client.ts'
 import { formatBytes, readFileAsText, saveBlob, sanitizeFileName, type DroppedEntry } from '../app/utils.ts'
 import { Alert, DropZone, Field, Panel, Progress } from './ui.tsx'
@@ -37,6 +37,7 @@ export function DecryptTab() {
     matched: boolean
     fingerprint: string
     hashVerified: boolean
+    timelock?: { enforced: boolean; exp?: number; nbf?: number }
   } | null>(null)
   const filesRef = useRef<File | null>(null)
 
@@ -202,7 +203,12 @@ export function DecryptTab() {
         return
       }
       const result = await cryptoClient.keyCheck(bytes)
-      setCheckResult({ matched: result.matched, fingerprint: result.fingerprint, hashVerified: result.hashVerified })
+      setCheckResult({
+        matched: result.matched,
+        fingerprint: result.fingerprint,
+        hashVerified: result.hashVerified,
+        timelock: result.timelock,
+      })
     } catch (checkError) {
       const code = errorMessageKey(checkError)
       setError(t(code))
@@ -437,6 +443,11 @@ export function DecryptTab() {
                           ? t('check.hashVerified')
                           : t('check.firstBlockOnly')}
                     </span>
+                    {checkResult.timelock?.enforced ? (
+                      <span className="mt-1 block text-[11px]" data-testid="check-timelock">
+                        {timelockText(t, checkResult.timelock)}
+                      </span>
+                    ) : null}
                   </Alert>
                 </div>
               ) : null}
@@ -517,4 +528,15 @@ export function DecryptTab() {
       </Panel>
     </div>
   )
+}
+
+/** 把时间锁信息转成用户可读的一行（自检结果显示用）。 */
+function timelockText(t: (key: MessageKey) => string, lock: { exp?: number; nbf?: number }): string {
+  const fmt = (v?: number) => (typeof v === 'number' ? new Date(v).toLocaleString() : '?')
+  const nbf = typeof lock.nbf === 'number' ? fmt(lock.nbf) : undefined
+  const exp = typeof lock.exp === 'number' ? fmt(lock.exp) : undefined
+  if (nbf && exp) return t('check.timelock.window').replace('{nbf}', nbf).replace('{exp}', exp)
+  if (nbf) return t('check.timelock.nbf').replace('{time}', nbf)
+  if (exp) return t('check.timelock.exp').replace('{time}', exp)
+  return t('check.timelock.nbf').replace('{time}', '?')
 }

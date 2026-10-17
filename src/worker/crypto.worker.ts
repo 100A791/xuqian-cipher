@@ -57,6 +57,8 @@ export type WorkerRequest =
       /** 用于挑选默认声明的语言 */
       lang?: 'zh' | 'en'
       expiresAt?: number
+      /** 时间锁·生效时间（epoch ms）：早于该时刻拒绝解密 */
+      notBefore?: number
       kind?: 'bytes' | 'text'
     }
   | { id: number; op: 'decrypt'; bytes: ArrayBuffer; verifyHash?: boolean }
@@ -95,6 +97,7 @@ export type WorkerResponse =
       noticeText: string | null
       originalSize?: number
       expiresAt?: number
+      notBefore?: number
     }
   | { id: number; op: 'hash'; ok: true; digests: Record<string, string> }
   | {
@@ -106,6 +109,8 @@ export type WorkerResponse =
       plaintextLength: number
       declaredHash?: string
       hashVerified: boolean
+      /** 时间锁信息（见 stream.ts 的 TimeLockError 与 timelockInfoOf） */
+      timelock?: { enforced: boolean; exp?: number; nbf?: number }
       /** 当前 Worker 中这把密钥的指纹（供用户与文件头/密钥文件核对） */
       fingerprint: string
       header: string
@@ -119,6 +124,7 @@ interface ParsedMetaShape {
   k?: 'bytes' | 'text'
   os?: number
   exp?: number
+  nbf?: number
   nl?: number
   /** 明文声明的 SHA-256（新格式）；存在即表示"文件应带明文前导区" */
   nh?: string
@@ -235,6 +241,7 @@ async function handle(request: WorkerRequest): Promise<WorkerResponse> {
         t: Date.now(),
         c: request.note,
         exp: request.expiresAt,
+        nbf: request.notBefore,
         os: gzipped ? originalSize : undefined,
       }
       const result = await encryptContainer(compressed, key, {
@@ -319,6 +326,7 @@ async function handle(request: WorkerRequest): Promise<WorkerResponse> {
         noticeText,
         originalSize: meta.os,
         expiresAt: meta.exp,
+        notBefore: meta.nbf,
       }
     }
 
@@ -335,6 +343,7 @@ async function handle(request: WorkerRequest): Promise<WorkerResponse> {
         plaintextLength: result.plaintextLength,
         declaredHash: result.declaredHash,
         hashVerified: result.hashVerified,
+        timelock: result.timelock,
         fingerprint: await key.fingerprint(),
         header: JSON.stringify({
           v: 1,

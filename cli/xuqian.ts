@@ -93,7 +93,7 @@ function usage() {
 用法:
   xuqian keygen  [-o <密钥文件>] [--password] [--note "说明"]
   xuqian encrypt <输入...> [--layers <算法列表>] [--chunk-size <大小>] [--gzip] [--encrypt-meta] [--timestamp-salt] [--out <目录>]
-                          [--note "说明"] [--expires <ISO时间>] [--key <hex> | --keyfile <文件>] [--password]
+                          [--note "说明"] [--expires <ISO时间>] [--not-before <ISO时间>] [--key <hex> | --keyfile <文件>] [--password]
   xuqian decrypt <输入...> [--key <hex> | --keyfile <文件>] [--password] [--out <目录>] [--check-only]
   xuqian inspect <输入...> [--json]
   xuqian verify  <输入>   [--key <hex> | --keyfile <文件>] [--password]
@@ -440,6 +440,10 @@ export async function cmdEncrypt(values, inputs) {
   const useGzip = values.gzip === true
   const expiresAt = values.expires ? Date.parse(values.expires) : undefined
   if (values.expires && Number.isNaN(expiresAt)) throw new CliError(`无法解析 --expires: ${values.expires}`)
+  const notBefore = values['not-before'] ? Date.parse(values['not-before']) : undefined
+  if (values['not-before'] && Number.isNaN(notBefore)) {
+    throw new CliError(`无法解析 --not-before: ${values['not-before']}`)
+  }
 
   const key = await resolveMasterKey(values)
   const temps = []
@@ -500,6 +504,7 @@ export async function cmdEncrypt(values, inputs) {
             ...(useGzip ? { os: sourceSize } : {}),
             ...(values.note ? { c: values.note } : {}),
             ...(expiresAt ? { exp: expiresAt } : {}),
+            ...(notBefore ? { nbf: notBefore } : {}),
           },
           onProgress: makeProgress(basename(targetPath), values.quiet),
         })
@@ -788,7 +793,17 @@ if (invokedDirectly) {
       process.stderr.write(`错误: ${error.message}\n`)
       process.exit(error.exitCode ?? 1)
     }
-    process.stderr.write(`错误: ${humanize(String(error?.message ?? error))}\n`)
+    const message = String(error?.message ?? error)
+    // 时间锁拒绝（引擎在解开 meta 之后、解出任何明文之前执行）
+    if (message === 'TIMELOCK_NOT_YET') {
+      process.stderr.write('错误: 该文件设定了生效时间，到点之前不能解密（基于本机时间戳验证）。\n')
+      process.exit(1)
+    }
+    if (message === 'TIMELOCK_EXPIRED') {
+      process.stderr.write('错误: 该文件已过到期时间，无法再解密（基于本机时间戳验证）。\n')
+      process.exit(1)
+    }
+    process.stderr.write(`错误: ${humanize(message)}\n`)
     process.exit(1)
   })
 }

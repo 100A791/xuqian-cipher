@@ -28,6 +28,7 @@ import {
   MIN_LAYERS,
   TAG_BYTES,
   FormatError,
+  HEADER_FLAG_TIMELOCK,
   hasMagic,
   headerAad,
   openPrivateMeta,
@@ -322,7 +323,8 @@ export async function encryptStream(
   const flags =
     (options.gzip ? HEADER_FLAG_GZIP : 0) |
     (options.encryptMeta ? HEADER_FLAG_ENC_META : 0) |
-    (options.timestampSalt ? HEADER_FLAG_TS_SALT : 0)
+    (options.timestampSalt ? HEADER_FLAG_TS_SALT : 0) |
+    (options.meta?.exp != null || options.meta?.nbf != null ? HEADER_FLAG_TIMELOCK : 0)
   const plaintextLength = options.plaintextLength
   if (!Number.isSafeInteger(plaintextLength) || plaintextLength < 0) throw new FormatError('META_SIZE_INVALID')
 
@@ -443,6 +445,38 @@ export async function readStreamHeader(reader: ByteReader): Promise<{ header: Xu
 }
 
 /**
+ * 时间锁校验失败。
+ * message 恒为错误码本身（TIMELOCK_EXPIRED / TIMELOCK_NOT_YET），
+ * 便于 UI 层与 CLI 直接映射文案；具体时刻通过 keyCheck 的 timelock 字段读取。
+ */
+export class TimeLockError extends Error {
+  readonly code: 'TIMELOCK_EXPIRED' | 'TIMELOCK_NOT_YET'
+  // 注意：不能用构造函数参数属性（constructor(readonly code)）——
+  // CLI 是让 Node 直接跑 .ts（类型擦除模式），参数属性属于"不可擦除语法"会导致模块加载崩溃。
+  constructor(code: 'TIMELOCK_EXPIRED' | 'TIMELOCK_NOT_YET') {
+    super(code)
+    this.name = 'TimeLockError'
+    this.code = code
+  }
+}
+
+/**
+ * 时间锁（基于时间戳验证）：flags 含 0x10 时，解密端在解开 meta 之后、
+ * 解开**任何密文块之前**，用当前时间与 meta.nbf / meta.exp 比较，不满足直接拒绝。
+ * 到达时刻的语义为闭区间 [nbf, exp]：now < nbf 拒绝，now > exp 拒绝。
+ *
+ * 如实记录局限：验证基于本机时钟（纯前端没有可信时间源，本站又承诺零网络请求），
+ * 修改系统时间即可绕过——它的定位是"防手滑"，不是"防对抗"。
+ */
+function enforceTimeLock(header: XuqianHeader, nowInput?: number): void {
+  if ((header.flags & HEADER_FLAG_TIMELOCK) === 0) return
+  const now = nowInput ?? Date.now()
+  const { nbf, exp } = header.meta
+  if (typeof nbf === 'number' && now < nbf) throw new TimeLockError('TIMELOCK_NOT_YET')
+  if (typeof exp === 'number' && now > exp) throw new TimeLockError('TIMELOCK_EXPIRED')
+}
+
+/**
  * 流式解密：读头部 → 逐块逆序剥层 → 写出。
  * 全程只驻留单块，内存有界。
  */
@@ -451,6 +485,7 @@ export async function decryptStream(
   sink: ByteSink,
   masterKey: MasterKey,
   onProgress?: ProgressFn,
+  options?: { now?: number },
 ): Promise<StreamDecryptResult> {
   const reader = new ByteReader(source)
   const { header, headerLength } = await readStreamHeader(reader)
@@ -468,6 +503,9 @@ export async function decryptStream(
   // 解密标识性元数据（若存在）。必须在算完 aad 之后：openPrivateMeta 会就地补字段
   // （原文件名等），而 aad 已物化为字节，不受后续 meta 变更影响。
   await openPrivateMeta(header.meta, masterKey, base64ToBytes(header.layers[0].s))
+  // 时间锁校验：meta 已用主密钥解开（错钥匙在上一行就 AUTH_FAILED 了），
+  // 此时尚未解出任何明文——这是唯一的正确执法点。
+  enforceTimeLock(header, options?.now)
   // 注意：子密钥不再一次性全部派生，而是由 openBlock 按块派生并立即擦除，
   // 这样"同时驻留的子密钥数量"从 L 个降到 1 个（大文件多层时内存与暴露面都更小）。
 
@@ -553,6 +591,8 @@ export interface KeyCheckResult {
   firstChunkHash: string
   /** 是否完成了"解出内容 vs 头部哈希"的全量比对（仅单块文件可能为 true） */
   hashVerified: boolean
+  /** 时间锁信息（密钥匹配时才有意义）。enforced=true 表示该文件要求时间戳验证 */
+  timelock?: { enforced: boolean; exp?: number; nbf?: number }
 }
 
 /**
@@ -568,7 +608,7 @@ export interface KeyCheckResult {
 export async function keyCheck(
   masterKey: MasterKey,
   source: ByteSource,
-  options: { verifyHash?: boolean } = {},
+  options: { verifyHash?: boolean; now?: number } = {},
 ): Promise<KeyCheckResult> {
   const reader = new ByteReader(source)
   const { header } = await readStreamHeader(reader)
@@ -586,8 +626,14 @@ export async function keyCheck(
   if (plan.chunkCount === 1) {
     const collected = collectingSink()
     try {
-      await decryptStream(source, collected.sink, masterKey)
+      await decryptStream(source, collected.sink, masterKey, undefined, { now: options.now })
     } catch (error) {
+      if (error instanceof TimeLockError) {
+        // 时间锁拒绝 = 密钥是对的（meta 已经用主密钥解开过），只是没到时间窗。
+        // 自检的职责是"告知"，不是"执法"，所以这里返回信息而不抛出。
+        await openPrivateMeta(header.meta, masterKey, base64ToBytes(header.layers[0].s))
+        return { ...base, matched: true, firstChunkHash: '', hashVerified: false, timelock: timelockInfoOf(header) }
+      }
       if (/AUTH_FAILED/.test(String((error as Error)?.message ?? error))) {
         return { ...base, matched: false, firstChunkHash: '', hashVerified: false }
       }
@@ -597,11 +643,13 @@ export async function keyCheck(
     const firstChunkHash = bytesToHex(sha256(plaintext)).toUpperCase()
     zeroize(plaintext)
     const shouldVerify = options.verifyHash !== false && declaredHash !== undefined
+    await openPrivateMeta(header.meta, masterKey, base64ToBytes(header.layers[0].s))
     return {
       ...base,
       matched: true,
       firstChunkHash,
       hashVerified: shouldVerify ? declaredHash === firstChunkHash : false,
+      timelock: timelockInfoOf(header),
     }
   }
 
@@ -625,5 +673,15 @@ export async function keyCheck(
     }
     throw error
   }
-  return { ...base, matched: true, firstChunkHash: '', hashVerified: false }
+  await openPrivateMeta(header.meta, masterKey, base64ToBytes(header.layers[0].s))
+  return { ...base, matched: true, firstChunkHash: '', hashVerified: false, timelock: timelockInfoOf(header) }
+}
+
+/** 读取时间锁信息。调用前必须先 openPrivateMeta（否则加密 meta 里读不到 exp/nbf）。 */
+function timelockInfoOf(header: XuqianHeader): { enforced: boolean; exp?: number; nbf?: number } {
+  return {
+    enforced: (header.flags & HEADER_FLAG_TIMELOCK) !== 0,
+    exp: header.meta.exp,
+    nbf: header.meta.nbf,
+  }
 }

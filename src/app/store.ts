@@ -95,6 +95,7 @@ export interface KeyModalState {
   chunkSize: number
   gzip: boolean
   expiresAt?: number
+  notBefore?: number
 }
 
 const SETTINGS_KEY = 'xuqian.settings.v1'
@@ -197,6 +198,7 @@ export interface AppState {
   /** 加密声明（不可去除；留空时写入默认声明） */
   notice: string
   expiresAt: string
+  notBefore: string
   chunkSize: number
   encrypting: boolean
   encryptProgress: number
@@ -239,6 +241,7 @@ export interface AppState {
   setNote: (value: string) => void
   setNotice: (value: string) => void
   setExpiresAt: (value: string) => void
+  setNotBefore: (value: string) => void
   setChunkSize: (value: number) => void
   setEncrypting: (value: boolean) => void
   setEncryptProgress: (value: number) => void
@@ -273,6 +276,7 @@ export const useApp = create<AppState>((set, get) => ({
   note: '',
   notice: '',
   expiresAt: '',
+  notBefore: '',
   chunkSize: 64 * 1024 * 1024,
   encrypting: false,
   encryptProgress: 0,
@@ -423,6 +427,7 @@ export const useApp = create<AppState>((set, get) => ({
   setNote: (value) => set({ note: value.slice(0, 200) }),
   setNotice: (value) => set({ notice: value.slice(0, 2000) }),
   setExpiresAt: (value) => set({ expiresAt: value }),
+  setNotBefore: (value) => set({ notBefore: value }),
   setChunkSize: (value) => set({ chunkSize: value }),
   setEncrypting: (value) => set({ encrypting: value }),
   setEncryptProgress: (value) => set({ encryptProgress: value }),

@@ -20,6 +20,8 @@ export interface EncryptRequest {
   encryptMeta?: boolean
   /** 时间戳附加盐（域分离，不提升安全性） */
   timestampSalt?: boolean
+  /** 时间锁·生效时间（epoch ms）：早于该时刻，Worker 在解出任何明文前直接拒绝 */
+  notBefore?: number
   note?: string
   /** 加密声明文本；留空则回退默认（本站不提供"不写声明"的选项） */
   notice?: string

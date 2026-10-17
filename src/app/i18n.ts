@@ -209,7 +209,8 @@ export const MESSAGES = {
     'encrypt.timestampSalt.hint':
       '把创建时间并入密钥派生，使同一密钥在不同文件上派生出不同子密钥。⚠ 此选项不提升安全性：时间戳需明文存入文件头，公开的盐不提供机密性',
     'encrypt.note': '备注（写入文件头，明文可见）',
-    'encrypt.expires': '到期提醒时间（可选，仅提示）',
+    'encrypt.expires': '到期时间（可选；过期后拒绝解密）',
+    'encrypt.notBefore': '生效时间（可选；到点前拒绝解密）',
     'encrypt.start': '开始加密',
     'encrypt.progress': '加密进度',
     'encrypt.done': '加密完成',
@@ -274,6 +275,9 @@ export const MESSAGES = {
     'check.hashVerified': '已比对完整内容哈希（单块文件）',
     'check.firstBlockOnly': '已通过首块认证（多块文件，未做全量哈希比对）',
     'check.needKey': '请先填入密钥或上传 .XUQIANKEY 文件',
+    'check.timelock.nbf': '时间锁：{time} 之前不可解密',
+    'check.timelock.exp': '时间锁：{time} 之后不可解密',
+    'check.timelock.window': '时间锁：{nbf} 至 {exp} 之间可解密',
     'check.mismatchHint': '认证失败时无法区分「密钥不对」与「文件被改动」，因此只给出统一结论。',
     'check.needFile': '请先选择一个 .XUQIAN 文件',
     'check.title': '密钥自检',
@@ -354,6 +358,8 @@ export const MESSAGES = {
     'log.shamir': '生成分片',
     'log.settings': '设置',
     'error.AUTH_FAILED': '密钥错误或文件损坏',
+    'error.TIMELOCK_NOT_YET': '该文件设定了生效时间：到点之前不能解密（基于本机时间戳验证）。',
+    'error.TIMELOCK_EXPIRED': '该文件已过到期时间：无法再解密（基于本机时间戳验证）。',
     'error.KEY_NOT_AVAILABLE': '当前没有可用密钥，请先输入或上传密钥',
     'error.FORMAT_INVALID': '不是有效的 .XUQIAN 文件，或文件已被截断',
     'error.KEYFILE_INVALID': '不是有效的 .XUQIANKEY 密钥文件',
@@ -597,7 +603,8 @@ export const MESSAGES = {
     'encrypt.timestampSalt.hint':
       'Mixes the creation time into key derivation so one key yields different subkeys per file. ⚠ This does NOT improve security: the timestamp must be stored in cleartext, and a public salt provides no confidentiality',
     'encrypt.note': 'Note (stored in the header, visible in plaintext)',
-    'encrypt.expires': 'Expiry reminder (optional, informational only)',
+    'encrypt.expires': 'Expiry time (optional; decryption is refused after it)',
+    'encrypt.notBefore': 'Release time (optional; decryption is refused before it)',
     'encrypt.start': 'Start encryption',
     'encrypt.progress': 'Encryption progress',
     'encrypt.done': 'Encryption finished',
@@ -665,6 +672,9 @@ export const MESSAGES = {
     'check.hashVerified': 'Full content hash compared (single-block file)',
     'check.firstBlockOnly': 'First block authenticated (multi-block file, no full-hash comparison)',
     'check.needKey': 'Enter a key or upload a .XUQIANKEY file first',
+    'check.timelock.nbf': 'Time lock: cannot decrypt before {time}',
+    'check.timelock.exp': 'Time lock: cannot decrypt after {time}',
+    'check.timelock.window': 'Time lock: decryptable between {nbf} and {exp}',
     'check.mismatchHint':
       'Authentication failure cannot separate a wrong key from a modified file, so the conclusion is intentionally uniform.',
     'check.needFile': 'Select a .XUQIAN file first',
@@ -749,6 +759,10 @@ export const MESSAGES = {
     'log.shamir': 'Generate shards',
     'log.settings': 'Settings',
     'error.AUTH_FAILED': 'Wrong key or corrupted file',
+    'error.TIMELOCK_NOT_YET':
+      'This file has a release time: decryption is refused until then (verified against the local clock).',
+    'error.TIMELOCK_EXPIRED':
+      'This file has expired: decryption is no longer possible (verified against the local clock).',
     'error.KEY_NOT_AVAILABLE': 'No key available — enter or upload one first',
     'error.FORMAT_INVALID': 'Not a valid .XUQIAN file, or it is truncated',
     'error.KEYFILE_INVALID': 'Not a valid .XUQIANKEY key file',
@@ -782,6 +796,8 @@ export function errorMessageKey(error: unknown): MessageKey {
   const code = raw.trim()
   const candidates: MessageKey[] = [
     'error.AUTH_FAILED',
+    'error.TIMELOCK_NOT_YET',
+    'error.TIMELOCK_EXPIRED',
     'error.KEY_NOT_AVAILABLE',
     'error.FORMAT_INVALID',
     'error.KEYFILE_INVALID',

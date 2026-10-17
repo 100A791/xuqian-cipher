@@ -36,6 +36,7 @@ export function EncryptTab() {
   const notice = useApp((s) => s.notice)
   const lang = useApp((s) => s.lang)
   const expiresAt = useApp((s) => s.expiresAt)
+  const notBefore = useApp((s) => s.notBefore)
   const chunkSize = useApp((s) => s.chunkSize)
   const encrypting = useApp((s) => s.encrypting)
   const progress = useApp((s) => s.encryptProgress)
@@ -83,6 +84,7 @@ export function EncryptTab() {
       store.logEvent('keyGen', `生成 128 位主密钥（指纹 ${fingerprint}），层数 ${layers.length}`)
 
       const expiresTs = expiresAt ? new Date(expiresAt).getTime() : undefined
+      const notBeforeTs = notBefore ? new Date(notBefore).getTime() : undefined
       const targets = files.filter((item) => item.status !== 'done' || !item.outputBlob)
       const list = targets.length > 0 ? targets : files
 
@@ -111,6 +113,7 @@ export function EncryptTab() {
           notice,
           lang,
           expiresAt: Number.isFinite(expiresTs) ? expiresTs : undefined,
+          notBefore: Number.isFinite(notBeforeTs) ? notBeforeTs : undefined,
           kind: 'bytes',
         })
         const outputName = encryptedFileName(item.path)
@@ -148,6 +151,7 @@ export function EncryptTab() {
         chunkSize,
         gzip,
         expiresAt: Number.isFinite(expiresTs) ? expiresTs : undefined,
+        notBefore: Number.isFinite(notBeforeTs) ? notBeforeTs : undefined,
       })
     } catch (err) {
       setError(t(errorMessageKey(err)))
@@ -305,9 +309,20 @@ export function EncryptTab() {
                 <input
                   type="datetime-local"
                   className="xq-input"
+                  data-testid="enc-expire"
                   value={expiresAt}
                   disabled={encrypting}
                   onChange={(event) => store.setExpiresAt(event.target.value)}
+                />
+              </Field>
+              <Field label={t('encrypt.notBefore')}>
+                <input
+                  type="datetime-local"
+                  className="xq-input"
+                  data-testid="enc-notbefore"
+                  value={notBefore}
+                  disabled={encrypting}
+                  onChange={(event) => store.setNotBefore(event.target.value)}
                 />
               </Field>
             </div>
