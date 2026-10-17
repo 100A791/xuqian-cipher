@@ -168,6 +168,10 @@
 
 ### 工程
 
+- **互操作报告确定化**：`docs/interop-report.md` 不再写入运行时间戳与 Node/平台信息（只打印到控制台），
+  随机密钥前缀（`ccaadd90…`）在写入前脱敏。连续两次运行产出**完全相同的文件**
+  （md5 一致），`pnpm test:all` 不再因为重跑而把工作树弄脏。
+
 - 新增依赖（均为 devDependencies，精确锁版本，与项目惯例一致）：
   `prettier`、`eslint`、`@eslint/js`、`typescript-eslint`、`eslint-plugin-react-hooks`、`globals`。
 - 新增 `.gitattributes`，只规定 `scripts/hooks/* text eol=lf`（钩子脚本带 CRLF 会导致

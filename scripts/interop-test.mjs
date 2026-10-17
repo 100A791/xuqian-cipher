@@ -443,10 +443,18 @@ try {
   // 报告
   // ==================================================================
   const allOk = results.every((r) => r.ok)
+  const runInfo = `Node ${process.version} · ${process.platform} · 真实 headless 浏览器（Edge/Chromium）`
+  // 报告里出现的随机密钥前缀（形如 `ccaadd90…`）每次运行都不同，会让报告产生无意义 diff。
+  // 只对写入文件的内容做脱敏；控制台仍然打印完整明细。
+  const stableDetail = (text) => text.replace(/\b[0-9a-f]{6,}(?=…)/gi, '<hex>')
+  // 时间戳与环境**不写进报告文件**：它们每次重跑都会变，会在工作树里制造无意义的 diff。
+  // 需要追溯运行环境时看控制台输出（或 CI 日志）。
+  console.log(`\n[interop] 运行环境：${runInfo}`)
   const report = `# 浏览器 ↔ 命令行 互操作测试报告
 
-生成时间：${new Date().toISOString()}
-运行环境：Node ${process.version} · ${process.platform} · 真实 headless 浏览器（Edge/Chromium）
+> 本文件由 \`node scripts/interop-test.mjs\` 自动生成，**请勿手工编辑**。
+> 时间戳与环境只打印到控制台，不写进文件，避免每次重跑都产生无意义的 diff。
+
 测试密钥：固定 Hex（\`0123456789abcdef0123456789abcdef\`）与浏览器随机生成的 128 位密钥各一轮
 
 ## 结论
@@ -459,7 +467,7 @@ ${reportRows.map((r) => `| ${r.direction} | ${r.case} | ${r.result} |`).join('\n
 
 ## 断言明细（共 ${results.length} 项，通过 ${results.filter((r) => r.ok).length} 项）
 
-${results.map((r) => `- ${r.ok ? '✅' : '❌'} ${r.name}${r.detail ? ` — ${r.detail}` : ''}`).join('\n')}
+${results.map((r) => `- ${r.ok ? '✅' : '❌'} ${r.name}${r.detail ? ` — ${stableDetail(r.detail)}` : ''}`).join('\n')}
 
 ## 为什么这个测试重要
 

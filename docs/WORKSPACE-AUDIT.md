@@ -529,6 +529,8 @@ node scripts/sync-docs.mjs
   与 `e2e`（手动触发：smoke / header / interop / offline）。**尚未在真实 GitHub Actions 上跑过**。
 - `package.json` → 2.3.0、`packageManager: pnpm@11.7.0`、新增 `test:offline` / `gen:icons`，
   `test:all` 末尾追加离线套件。
+- **互操作报告确定化**：去掉时间戳与环境行、随机密钥前缀脱敏；连续两次 `interop-test.mjs`
+  产出 md5 相同的文件（`89d2d642…`），`test:all` 重跑不再弄脏工作树。
 - 文档：README（PWA、刷新保护、体积、目录树、调试端口）、TESTING（§四 修正为元数据加密后的真实断言、新增 §四·补）、
   CHANGELOG（2.3.0）。
 
