@@ -71,13 +71,13 @@ pnpm build        # 类型检查 + 产出 dist/
 pnpm preview      # 本地预览构建结果（5189）
 ```
 
-产物体积（gzip 后约）：主包 ~120 KB、Worker ~28 KB、样式 ~4 KB。
+产物体积（gzip 后约）：主包 ~138 KB。自研路线按需加载，拆成约 13 个 chunk，选「简单加密」的用户不下载它们。
 
 ### 全部验证（推荐）
 
 ```bash
 pnpm test:all
-# = typecheck + 单元测试 + 构建 + 浏览器端到端冒烟 + 文件头验证
+# = 文档守卫 + 格式 + 类型 + 单元测试 + 构建 + CLI + 冒烟 + 文件头 + 互操作 + 离线壳
 ```
 
 ---
@@ -114,10 +114,13 @@ pnpm test:all
 - 哈希校验工具（SHA-256 / SHA-512，加密前记录、解密后自动比对）
 - 暗色/亮色主题、中英双语、快捷键、本地操作日志（不含密钥）
 - 命令行工具（`xuqian` / `cli/xuqian.ts`，与网页共用同一套字节实现，可互解）
+- **PWA 离线壳**：构建产物预缓存进 Service Worker，断网也能打开并完成加解密；
+  新版本在**关闭所有标签页后**生效，正在使用的页面不会因为更新而"半个应用崩掉"
+- **离开页面前确认**：密钥尚未销毁时刷新/关闭会先弹浏览器确认框（误按 F5 的代价不可逆）
 
 ### 尚未实现（P2，未来迭代）
 
-PWA 离线安装、伪装扩展名、加密笔记、浏览器扩展、时间锁强制自毁
+伪装扩展名、加密笔记、浏览器扩展、时间锁强制自毁
 （纯前端无法真正自毁，仅做到期提醒）。
 
 ---
@@ -201,6 +204,8 @@ PWA 离线安装、伪装扩展名、加密笔记、浏览器扩展、时间锁�
    拿到密文但没有密钥的人连"这是什么文件"都看不到——文件名本身常常就泄密。
 8. **会话可锁定**：空闲达设定时长或手动点「锁定」即销毁主密钥、清空一次性密钥视图与已解出明文。
 9. **统一错误**：密钥错误与文件损坏都返回同一个提示，不泄露 oracle 信息。
+10. **离线壳不碰数据**：Service Worker 只预缓存构建产物（HTML / JS / CSS / 图标），
+    不缓存用户文件、明文或密钥；密钥仍然只在 Worker 的内存里。缓存可在浏览器站点设置里单独清除。
 
 ### 必须知道的边界（诚实披露）
 
@@ -226,6 +231,11 @@ PWA 离线安装、伪装扩展名、加密笔记、浏览器扩展、时间锁�
 ```
 .
 ├── index.html                     # 入口（含 CSP 声明）
+├── public/
+│   ├── manifest.webmanifest       # PWA 清单（standalone；sw.js 由构建生成到 dist/）
+│   ├── favicon.svg                # 站点图标（矢量）
+│   └── icons/                     # 192 / 512 PNG（scripts/gen-icons.mjs 生成）
+├── .github/workflows/ci.yml       # CI：门禁（每次 push）+ 真浏览器套件（手动触发）
 ├── src/
 │   ├── main.tsx                   # React 挂载
 │   ├── App.tsx                    # 应用外壳（四个 Tab、主题、快捷键）
@@ -235,6 +245,7 @@ PWA 离线安装、伪装扩展名、加密笔记、浏览器扩展、时间锁�
 │   │   ├── useAutoLock.ts         # 空闲自动锁定（超时销毁主密钥、清空明文）
 │   │   ├── i18n.ts                # 中英双语字典
 │   │   ├── utils.ts               # 文件读写、下载、拖拽解析、格式化
+│   │   ├── pwa.ts                 # 生产构建下注册 Service Worker（离线壳）
 │   │   └── zip.ts                 # 极简 ZIP 打包（store 模式）
 │   ├── crypto/
 │   │   ├── aead.ts                # 算法注册表 + AEAD 封装（WebCrypto / noble）
@@ -261,6 +272,10 @@ PWA 离线安装、伪装扩展名、加密笔记、浏览器扩展、时间锁�
 ├── scripts/
 │   ├── smoke.mjs                  # 浏览器端到端冒烟测试（CDP）
 │   ├── verify-header.mjs          # .XUQIAN 文件头结构验证
+│   ├── verify-offline.mjs         # 离线壳验证（真断网）
+│   ├── lib/devtools.mjs           # 调试端口卫生 + 浏览器收尾（Browser.close）
+│   ├── sw-template.js             # Service Worker 模板（构建时注入预缓存清单）
+│   ├── gen-icons.mjs              # 生成 PWA 图标（无第三方依赖）
 │   ├── capture-guide.mjs          # 自动生成 docs/images/ 操作手册配图
 │   └── gen-cert.mjs               # 本地 HTTPS 自签名证书
 └── docs/
@@ -308,8 +323,22 @@ pnpm test:header
 ```
 
 真实加密一个 3 层 + gzip 的文件，落盘后解析 `.XUQIAN` 头部并断言：
-魔数、版本、gzip 标志、层数、算法顺序（UI 逆序）、原始文件名（含中文）、
-原始大小、SHA-256、以及**文件头绝不包含主密钥**。
+明文声明前导区、容器起点、版本、gzip 标志、层数、算法顺序（UI 逆序）、SHA-256，
+以及**元数据加密开启时原文件名不得出现在明文头部/声明区、文件头绝不包含主密钥**。
+
+### 离线壳（PWA）验证（5 项）
+
+```bash
+pnpm build && pnpm test:offline
+```
+
+真构建 + 真 preview + **真断网**：断言构建产物含 `sw.js` / manifest / 图标、
+Service Worker 已注册并接管页面、用 CDP 切断网络后刷新仍能启动、
+断网状态下还能完成一次文本加密（密钥弹窗出现）。
+
+> 浏览器套件的调试端口可用 `XQ_SMOKE_PORT` / `XQ_INTEROP_PORT` / `XQ_HEADER_PORT` /
+> `XQ_OFFLINE_PORT` 覆盖（默认 9411 / 9412 / 9413 / 9414）。端口被别的程序占用时脚本会
+> **直接报错退出**，不会悄悄连到别人的浏览器上——这曾经是"等待超时: 页面加载完成"的真凶。
 
 ### 验收标准对照
 
@@ -336,6 +365,8 @@ pnpm build
   - `Referrer-Policy: no-referrer`
   - `Permissions-Policy: geolocation=(), camera=(), microphone=()`
 - [ ] 若需要浏览器端 gzip 解压的 WASM 变体，确认 `Content-Type` 正确
+- [ ] **PWA**：`dist/` 已含 `sw.js` / `manifest.webmanifest` / `icons/`，HTTPS 下可安装；
+      不要给 `sw.js` 设长期缓存（建议 `Cache-Control: no-cache`），否则更新会被延迟
 - [ ] **不要**接入任何会记录请求体的日志/CDN 分析脚本（虽然本站不发送任何请求，
       但第三方脚本会破坏 CSP，也会引入 XSS 风险）
 

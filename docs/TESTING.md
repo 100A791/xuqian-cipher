@@ -15,6 +15,7 @@ pnpm test:cli      # 命令行工具测试（58 项，含与网站共用加密�
 pnpm test:smoke    # 浏览器端到端冒烟测试（119 项，真实 Edge/Chrome + CDP，含 11 处无障碍审计）
 pnpm test:header   # .XUQIAN 文件头结构验证（真实落盘文件解析）
 pnpm test:interop  # 浏览器 ↔ 命令行 双向互操作（27 项）
+pnpm test:offline  # 离线壳（PWA）：真断网后仍能启动并加密（5 项，需先 build）
 pnpm test:selfcrypto  # **自研加密路线**（15 套 234 项断言，零依赖运行器）
 pnpm bench         # 性能基准（实测数字，写入 docs/PERFORMANCE.md）
 
@@ -23,6 +24,11 @@ pnpm test:all      # 以上全部（推荐在交付前执行）
 
 冒烟测试会自动探测本机 Edge / Chrome 的安装路径，使用 `--headless=new` 启动，
 不依赖 Playwright 等额外依赖。若未找到浏览器，脚本以退出码 2 表示"跳过"。
+
+浏览器套件的调试端口可用环境变量覆盖：`XQ_SMOKE_PORT`（默认 9411）、
+`XQ_INTEROP_PORT`（9412）、`XQ_HEADER_PORT`（9413）、`XQ_OFFLINE_PORT`（9414）。
+**端口被占用时脚本会直接报错退出**，不会复用别人的浏览器——2026-10-17 复检确认，
+"`等待超时: 页面加载完成`"的真因就是调试端口被 IDE 内置的 headless 预览占用。
 
 ---
 
@@ -283,34 +289,51 @@ FFT 额外与朴素 DFT（O(N²) 独立实现）逐点对照；DWT 用正交归�
 | 断言 | 期望 |
 | --- | --- |
 | 魔数 | `XUQIAN` |
-| 版本 | `1` |
-| flags | 含 gzip 位（`0x02`） |
-| chunkCount | `1` |
-| layerCount | `3` |
+| 明文声明前导区 | 存在；声明的字节长度 / SHA-256 与头部 `meta.nl` / `meta.nh` 一致 |
+| 容器起点 | 由前导区长度算出，容器字段按相对偏移读取 |
+| 版本 / flags | `1`；gzip 位（`0x02`）与元数据加密位（`0x04`）正确 |
+| chunkCount / layerCount | `1` / `3` |
 | 算法顺序 | 等于 UI 层列表的**逆序**（UI 自上而下显示、自下而上执行） |
-| 算法集合 | 与所选一致 |
-| 原始文件名 | 完整保留中文（`report-报告.pdf`） |
-| 原始大小 | `os = 3000` |
-| gzip 生效 | `meta.s`（305）< `meta.os`（3000） |
+| 元数据加密 | 开启时：`meta.n` / `meta.os` **不得**出现在明文头部；原文件名不得出现在明文头部与声明区 |
+| `meta.x` | 存在非空密文块 |
 | SHA-256 | 64 位大写 Hex |
-| **密钥泄露检查** | 文件头字节中**绝不包含**主密钥 Hex |
+| **密钥泄露检查** | 「声明前导区 + 容器头部」整段明文中**绝不包含**主密钥 Hex |
 
-实测输出示例：
+实测输出示例（元数据加密默认开启）：
 
 ```
 magic          : XUQIAN
+声明前导区      : 存在（485 字节）
+容器起点        : 496
 version        : 1
-flags          : 2 (gzip=on)
+flags          : 6 (gzip=on, meta=on)
 chunkSize      : 67108864
 chunkCount     : 1
 layerCount     : 3
-headerJsonLen  : 493
 算法顺序        : SM4-GCM -> CHACHA20-POLY1305 -> AES-256-GCM
-原始文件名      : report-报告.pdf
-原始大小        : 305 (+os=3000)
+元数据加密      : 已开启（标识性字段收进 meta.x）
+原始文件名      : (已加密，明文头部不可见)
+原始大小        : 305 (+os=已加密)
+meta.x 密文块   : 存在（100 字符 base64）
 SHA-256        : 614FA9F89832503A2932950D80D603ED5BEE0F3E060C94FD5CC1A4FE18CDC0E4
-文件总大小      : 899
+文件总大小      : 1712
 ```
+
+---
+
+## 四·补、离线壳验证（`scripts/verify-offline.mjs`，5 项）
+
+前提：先 `pnpm build`（脚本发现 `dist/` 不存在时会自动构建一次）。
+
+| # | 检查 | 做法 |
+| --- | --- | --- |
+| 1 | 构建产物齐全 | `dist/` 内含 `sw.js` / `manifest.webmanifest` / 192·512 图标 / favicon |
+| 2 | Service Worker 已注册 | 页面里 `getRegistration()` 能拿到 active/installing/waiting |
+| 3 | Service Worker 已接管 | `controller.scriptURL` 指向 `/sw.js`；缓存名形如 `xuqian-<buildId>` |
+| 4 | 断网刷新仍可用 | CDP `Network.emulateNetworkConditions(offline)` 后 `Page.reload`，`#root` 重新挂载 |
+| 5 | 断网仍能加密 | 断网状态下输入文本并点「加密文本」，密钥弹窗必须出现 |
+
+> 这条套件同时验证了"加密不依赖任何网络"这一产品声明——不是读代码得出的，是真断网跑出来的。
 
 ---
 
@@ -349,7 +372,7 @@ SHA-256        : 614FA9F89832503A2932950D80D603ED5BEE0F3E060C94FD5CC1A4FE18CDC0E
 | Firefox / Safari 自动化 | 冒烟脚本只探测 Edge/Chrome；Safari 需手工验证 |
 | 剪贴板写入 | headless 环境默认被拒绝，冒烟脚本会走二次确认分支并记录该事实 |
 | IE / 旧版浏览器 | 明确不支持（需要 WebCrypto、Worker、ES2022） |
-| P2 功能 | PWA 离线、伪装扩展名、时间锁、加密笔记、扩展、CLI 均未实现 |
+| P2 功能 | 伪装扩展名、时间锁、加密笔记、浏览器扩展仍未实现；PWA 离线已实现（见 §四·补），CLI 已实现（`pnpm test:cli`） |
 | 性能基准 | 未做正式 benchmark；实测 150 KB 文件加密 + 下载 + 解密在无头浏览器中 < 3 秒 |
 
 ---

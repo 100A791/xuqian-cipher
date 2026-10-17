@@ -155,6 +155,27 @@ claim({
   expect: [vitestCases],
 })
 
+/**
+ * 上面那条只锚住了"摘要行"（`单元 **92**`）。同文件的 §6 套件表里还有**第二处**同义数字
+ * （`| 单元测试（Vitest） | 92 |`），2026-10-17 复验时它写的是 88 —— 已过期，而守卫没看见。
+ * 教训：同一个事实在文档里出现几次，就要为每一次都建锚点，否则"修了"只是改了被锚住的那一处。
+ */
+claim({
+  label: 'PROJECT-REPORT 套件表',
+  file: 'docs/PROJECT-REPORT.md',
+  pattern: /\|\s*单元测试（Vitest）\s*\|\s*(\d+)\s*\|/,
+  expect: [vitestCases],
+  hint: '这是 §6 套件表里的"单元测试（Vitest）"行，与摘要行是两个独立的位置。',
+})
+
+claim({
+  label: 'SELFCRYPTO-README 宣称的站点单测数',
+  file: 'src/selfcrypto/README.md',
+  pattern: /站点原有单测 (\d+) 项/,
+  expect: [vitestCases],
+  hint: '这里指的是站点（简单路线 + 自研路线之外的）Vitest 用例数，口径同 README.md。',
+})
+
 // ---------------------------------------------------------------- 测试套件口径
 
 claim({

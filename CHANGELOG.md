@@ -8,11 +8,37 @@
 
 ---
 
-## [未发布]
+## [2.3.0] - 2026-10-17
 
-> 尚未打版本号。建议下一个版本为 **2.3.0**（有性能改进与新增能力，无破坏性变更），由维护者确认后手工提升 `package.json`。
+> 从 2.2.0 升级：无破坏性变更，`.XUQIAN` / `.XUQIANKEY` 格式与密钥语义完全不变。
+> 本次的重点是**可用性**（PWA 离线、刷新保护）与**可验证性**（CI、端口卫生、离线验证）。
 
 ### 新增
+
+- **PWA 离线壳**。构建时由 `vite.config.ts` 生成 `dist/sw.js`（模板在 `scripts/sw-template.js`），
+  预缓存本次构建的全部 hashed 产物；导航请求 network-first，离线回退到缓存。
+  于是断网（或纯离线环境）也能打开并完成加解密。**刻意不做 `skipWaiting`**：
+  新版本在所有标签页关闭后生效，正在使用的页面不会因为"更新到一半"而取不到旧 chunk。
+  图标由 `scripts/gen-icons.mjs` 生成（纯 Node，无第三方依赖）；`manifest.webmanifest`
+  声明 standalone。Service Worker **只缓存构建产物**，不碰用户文件、明文或密钥。
+
+- **离开页面前的确认**。密钥尚未销毁时，刷新/关闭标签页会触发浏览器确认框
+  （`src/worker/client.ts`）。原实现在 `beforeunload` 里直接 `destroyKeySync()`——
+  误按 F5 就是永久丢失，且没有任何挽回余地。现在只有 `pagehide`（页面确实要走了）
+  才销毁密钥；用户点"取消"留在页面时，密钥必须还在。
+
+- **CI**（`.github/workflows/ci.yml`）。每次 push / PR 跑：文档数字守卫 → ESLint →
+  Prettier → 类型检查 → Vitest → 构建；真浏览器套件（冒烟 / 文件头 / 互操作 / 离线壳）
+  放在手动触发的 `e2e` job。此前 234 + 119 + 27 项断言只存在于本机，没有任何自动执行入口。
+
+- **离线壳验证**（`scripts/verify-offline.mjs`，`pnpm test:offline`，5 项）。真构建、真 preview、
+  用 CDP 把网络切成 offline 后刷新，断言外壳仍能启动、且**断网状态下还能完成一次文本加密**。
+  这条同时把"加密不依赖网络"从声明变成了可复现证据。
+
+- **调试端口卫生**（`scripts/lib/devtools.mjs`）。`assertPortFree()` 在启动浏览器前检查端口，
+  被占用就**直接报错退出**并提示用哪个环境变量换端口；`closeBrowser()` 用 CDP `Browser.close`
+  真正关浏览器、等端口释放后再删临时 profile。四套浏览器脚本的端口均可用
+  `XQ_SMOKE_PORT` / `XQ_INTEROP_PORT` / `XQ_HEADER_PORT` / `XQ_OFFLINE_PORT` 覆盖。
 
 - **全局错误边界**（`src/components/ErrorBoundary.tsx`）。此前全站没有任何 `ErrorBoundary` /
   `componentDidCatch`，任一路由在渲染期抛异常就会白屏；而本站是加密工具，白屏时用户**无法区分**
@@ -38,6 +64,11 @@
 
 ### 变更
 
+- **默认调试端口避开 9333**（smoke 9411、interop 9412、header 9413、offline 9414）。
+  原因见「修复」第一条。
+
+- **`version` 提升到 2.3.0**，`packageManager` 固定为 `pnpm@11.7.0`。
+
 - **自研加密路线改为按需加载**（`src/App.tsx`）。两条路线此前都是静态导入，导致选择「简单加密」的
   用户也要下载整个自研路线（含 AI 检测的 FFT/DWT）。改为 `React.lazy` + `Suspense` 后，
   `vite build` 实测（同一台机器、同一套依赖）：
@@ -58,6 +89,23 @@
   `start-xuqian.cmd` 另新增：`pnpm dev` 失败时给出可读诊断（见下方"已知环境陷阱"）。
 
 ### 修复
+
+- **浏览器套件「等待超时: 页面加载完成」的真因（不是"顺序耦合"）**。2026-10-17 复检抓到现场：
+  端口 9333 被 IDE 内置的 headless 预览浏览器占着（命令行 `--user-data-dir=...\Temp\wbcdp_run`），
+  而 `waitForDevtools()` 只判断 `/json/version` 是否 200，**不校验这个实例是不是自己启动的**，
+  于是连到对方的 `about:blank` 上等 60 秒。同一份脚本把端口换成 9411 后 **119/119 全绿**；
+  上一轮那两条"回归"（水印页元素缺失、找不到 `.XUQIAN` 下载按钮）也随之消失——它们是错连页面后的级联误报。
+  现在启动前用 `assertPortFree()` 直接报错，不再四处静默复用别人的浏览器。
+
+- **测试收尾没有真正关掉浏览器**。`browser.kill()` 在 Windows 只杀启动器，而 `finally` 紧接着
+  `rmSync(workDir)` 把仍在运行的浏览器 profile 删掉——下一次运行更容易命中陈旧实例。
+  现在统一走 CDP `Browser.close`，**等端口释放后**再删临时目录。实测跑完后
+  `remote-debugging-port=9411..9414` 的残留进程为 **0**。
+
+- **`sync-docs` 失败会删掉半个 `public/docs`**。原实现先 `rmSync(outDir, { recursive: true })` 再复制：
+  只要删除被中断（目录被 dev server 占用、或 safe-delete 一类 shim 拦下），就会留下"少了 index.html、
+  只剩 images/"的半截目录，而且失败发生在复制之前。现改为逐文件覆盖 + 清理多余文件；
+  实测在 **Node 22 + shim + vite dev 正在运行** 的最坏组合下也能成功同步。
 
 - **冒烟测试中一条长期静默失败的断言**（`scripts/smoke.mjs`）。该断言检查开始页自研卡片里
   出现"**已经可用**"，但这句话已在 10-06 的文案改写中被替换为 `start.self.pending`
@@ -80,6 +128,24 @@
 
 - **文档数字修正**：`README.md` 目录树把 `docs/images/` 的截图数写成 21（实为 31）；
   单元测试数在 4 处仍写 88（新增 i18n 测试后实为 92）。
+
+- **`pnpm test:header` 此前是坏的（三处失效叠加，2026-10-17 复验发现并修复）**。
+  该脚本挂在 `test:all` 里，却一直没被跑过 —— 下面 3 个问题各自都足以让它失败：
+  1. **没有处理开始页**（路线二选一）→ 主界面未挂载，`[role=tab]` 为空 →
+     `Cannot read properties of undefined (reading 'click')`。
+  2. **把文件起点当成容器起点**。文件布局是 `[明文声明前导区] ‖ [加密容器]`，
+     脚本却按文件偏移读 `version`/`headerLen`，于是从声明正文的第二个字节开始 `JSON.parse`，
+     报 `Unexpected token '证'`。现改为先解前导区、再按容器相对偏移解析。
+  3. **无条件断言 `meta.n` / `meta.os`**。简单路线默认开启元数据加密后，这些字段已被移入
+     `meta.x`，明文头部里读到的是 `undefined`。现按 `flags & 0x04` 分流，并在加密时改断言
+     「这些字段**不得**出现在明文头部、原文件名不得出现在明文/声明区」——比断言值更强的性质。
+  修完实测通过，输出可见声明前导区、容器起点、三层算法逆序、`meta.x` 存在。
+  端口也从与 interop 共用的 9335 改为 9336（仅端口分工，**不解决**下面"顺序耦合"那条）。
+
+- **文档数字再次修正（2026-10-17）**：上一轮"4 处写 88"其实只修了**守卫锚住的那几处**，
+  `docs/PROJECT-REPORT.md` §6 套件表与 `src/selfcrypto/README.md` 仍写 88。已改为 92，
+  并给 `scripts/check-counts.mjs` 补了两条锚点（已做负向测试：故意写错即报错）。
+  教训：文档里同一个事实出现几次，就要有几个锚点；数字守卫的盲区就是"它没锚的地方"。
 
 ### 文档
 
@@ -117,14 +183,30 @@
   `.bin` 才是包管理器生成的稳定入口。
 - 本轮提交：`4c7b134`（功能与工具链）、`9edaf60`（格式重排与门禁接线）。
 
-### 本轮验证记录（2026-10-16，Node 24.21.0）
+### 本轮验证记录（2026-10-17，2.3.0）
+
+| 项目 | 命令 | 结果 |
+| --- | --- | --- |
+| 类型检查 | `tsc -p tsconfig.app.json --noEmit` | ✅ 0 错误 |
+| 单元测试 | `vitest run` | ✅ **92/92** |
+| 自研路线 | `node tests/unit/run-all.js` | ✅ **15 套 / 234 项** |
+| 文档数字守卫 | `node scripts/check-counts.mjs` | ✅ 通过 |
+| 格式 | `prettier --check .` | ✅ 通过 |
+| 构建 | `vite build` | ✅ 160 模块，主包 **414.28 kB / gzip 138.12 kB**，`sw.js` 2.91 kB |
+| 端到端冒烟 | `node scripts/smoke.mjs` | ✅ **119 项、失败 0、备注 1**，退出码 0（端口 9411） |
+| 文件头结构 | `verify-header.mjs` | ✅ 通过（端口 9413） |
+| 互操作 | `interop-test.mjs` | ✅ **27/27**（端口 9412，**紧随 header 运行**，未复现旧的"顺序耦合"） |
+| 离线壳 | `verify-offline.mjs` | ✅ **5/5**（真断网后仍能启动并完成文本加密） |
+| 收尾 | `netstat` / 进程检查 | ✅ 9411–9414 无 LISTENING；无残留 headless 浏览器 |
+
+### 此前验证记录（2026-10-16，2.2.0 → 2.3.0 开发期）
 
 | 项目 | 命令 | 结果 |
 | --- | --- | --- |
 | 类型检查 | `tsc -p tsconfig.app.json --noEmit` | ✅ 0 错误 |
 | 单元测试 | `vitest run` | ✅ **92/92 通过**（9 个文件） |
 | 自研路线 | `node tests/unit/run-all.js` | ✅ **15/15 套、234 项断言** |
-| 文档数字守卫 | `node scripts/check-counts.mjs` | ✅ 通过（并已做负向测试：故意写错即报错） |
+| 文档数字守卫 | `node scripts/check-counts.mjs` | ✅ 通过（含负向测试：故意写错即报错） |
 | 代码格式 | `prettier --check .` | ✅ 全部符合（重排后） |
 | 文档同步 | `node scripts/sync-docs.mjs` | ✅ 8 篇文档 + 截图，链接校验通过 |
 | 构建 | `vite build` | ✅ 159 模块，主包 414.06 kB / gzip 138.01 kB |
@@ -149,11 +231,12 @@
 ### 已知环境陷阱（不是本项目的缺陷，但会浪费你的时间）
 
 - **`pnpm dev` / `pnpm build` / `pnpm test:all` 的第一步是 `node scripts/sync-docs.mjs`。
-  某些 Node 构建在这个脚本上会*静默*崩溃** —— 脚本自身零输出，pnpm 只打印一句
-  `[ELIFECYCLE] Command failed with exit code 3221226505`（`0xC0000409`，原生崩溃而非普通脚本报错）。
-  本机实测：Node **22.22.2** 崩溃；Node **24.21.0** 正常。排查：
-  `node --version` 与 `pnpm exec node --version`（后者才是 pnpm 实际用来跑脚本的）。
-  若两者报告 22.x，请装 Node 24 并置于 PATH 最前。`start-xuqian.cmd` 已会在失败时提示这条。
+  旧实现在这里可能*静默*崩溃或报 `safe-delete ... Some operations were aborted`**
+  （pnpm 有时只打印 `[ELIFECYCLE] Command failed with exit code 3221226505`，即 `0xC0000409`）。
+  根因是"先 `rmSync` 整棵 `public/docs` 再复制"：删除被 shim 或 dev server 占用打断，就留下半截目录。
+  **2.3.0 已改为覆盖式同步**，本轮在 Node **22.22.2 + shim + vite dev 正在运行** 的组合下实测通过。
+  排查时看 `node --version` 与 `pnpm exec node --version`（后者才是 pnpm 实际用的）；
+  若仍失败，把 Node 24 置于 PATH 最前。
 - **本仓库的 `node_modules` 曾被沙箱环境的安装过程部分破坏**（pnpm 只创建了目录、
   未填充内容，表现为 `Cannot find module 'debug'` 之类）。在自己机器上跑一次 `pnpm install`
   即可恢复。这也是 `pnpm lint` 目前**未能实际执行验证**的原因（见下）。
@@ -164,12 +247,12 @@
 
 ### 待办 / 未完成
 
-- **ESLint 配置已就位但未能在本机验证**（唯一仍未闭环的一项）：`eslint.config.js` 是按扁平配置 API
-  编写的，且已核对 `typescript-eslint@8.71.2` 与 `eslint-plugin-react-hooks@7.1.1` 的 peer 范围
-  都声明支持 `eslint@^10`；但沙箱内 pnpm 装出的依赖树不完整（`@eslint-community` 目录为空、
-  启动即报 `Cannot find module 'debug'`），`eslint` 无法启动。
-  请在正常环境执行 `pnpm install && pnpm lint` 验证；若有报错请反馈。
-  **`pnpm lint` 因此仍未接入 `test:all`**（接进去会立刻变红）。
+- **ESLint 仍未在本机验证**：`eslint.config.js` 已就位，但本机 `node_modules/eslint` 目录缺失
+  （`.bin/eslint` 是悬空 shim），`pnpm lint` 无法启动。**已接入 CI（`quality` job）**，
+  首次 CI 通过即可确认规则与配置有效；在那之前请勿把本地 `pnpm lint` 的失败当成代码问题。
+- **`verify-offline` 的安装态未验证**：离线与断网加密已自动化（5/5），但"从浏览器地址栏安装为
+  应用"这一步需要人工点击，未纳入自动化。手工验收：Chrome/Edge 地址栏右侧出现安装图标 →
+  安装 → 断网打开 → 仍可加解密。
 
 ### 已完成（此前列为待办，2026-10-16 已做）
 

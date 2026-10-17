@@ -9,7 +9,7 @@
 > 下面 §2「规模与技术栈」与 §3 的验证表格记录的是**首轮（10-06 02:13）的实测结果**，
 > 其中「`src/` 共 75 个文件、13 312 行」与「本机版本控制：**无**（`.git` 不存在）」
 > **已被后续轮次改变**——现为 **82 个文件 / 14 469 行**，且已建立 git 基线（首个 commit `5121a02`）。
-> 后续章节（§4 起）是二、三轮复验的内容，故同一文件内会出现"首轮 66/66、二轮 88/88"这类并存数字，
+> 后续章节（§4 起）是二~四轮复验的内容，故同一文件内会出现"首轮 66/66、二轮 88/88"这类并存数字，
 > 那是时间先后，不是自相矛盾。
 > 需要**当前口径**时，以 `node scripts/check-counts.mjs` 的输出为准——它用实测值断言文档中的数字。
 
@@ -264,9 +264,12 @@ PBKDF2-HMAC-SHA1("password","salt",c=4096,dkLen=20) = 4b007901b765489abead49d926
 
 ---
 
-## 10. 第三轮：围绕"数据保护"定位的能力补强（2026-10-06）
+## 9. 第三轮：围绕"数据保护"定位的能力补强（2026-10-06）
 
-### 10.1 立项依据（不是拍脑袋加功能）
+> 编号修正（2026-10-17）：本节原编号为 §10，但本报告从来没有 §9（该编号自引入起就跳号）。
+> 全文没有任何地方引用"本报告 §10"，故直接回填为 §9，避免读者以为漏读了一节。
+
+### 9.1 立项依据（不是拍脑袋加功能）
 
 用户提出"网站主要以数据保护/加密为主，能否据此完善"。复核后确认：**密码学内核已经很强**（内容机密性、密钥生命周期、完整性、零网络、内存卫生、统一失败提示六项达标），
 真正的短板在**内核之外的"数据保护维度"**。据此定下 5 项，全部有源码依据：
@@ -279,7 +282,7 @@ PBKDF2-HMAC-SHA1("password","salt",c=4096,dkLen=20) = 4b007901b765489abead49d926
 | 4 | 改密钥文件口令须整文件重加密 | **密钥轮换**（只重封装 KEK） |
 | 5 | 威胁模型只在 Markdown 里，界面无任何态势提示（次要） | 界面文案补充（未做独立态势面板） |
 
-### 10.2 一项被拒绝的需求（重要）
+### 9.2 一项被拒绝的需求（重要）
 
 用户追加要求"密钥基于时间戳生成，以及当前 IP 或 Mac 地址"。**已明确拒绝并说明理由**，因为它会把前面所有努力一次性抵消：
 
@@ -292,7 +295,7 @@ PBKDF2-HMAC-SHA1("password","salt",c=4096,dkLen=20) = 4b007901b765489abead49d926
 把这三者当密钥材料 = 把 128 位随机密钥**降级成十几位可猜的量**。最终按用户选择折中为：
 **只把时间戳当"附加盐"**（第 5 项），并在 UI 与 FORMAT.md 中**明确标注它不提升安全性**——因为时间戳必须明文存进文件头才能被解密端复现，公开的低熵盐不提供任何机密性。
 
-### 10.3 实现与验证
+### 9.3 实现与验证
 
 | 项 | 落点 | 关键设计 |
 | --- | --- | --- |
@@ -315,6 +318,234 @@ CLI 全特性往返                      --gzip --encrypt-meta --timestamp-salt 
 ```
 
 同时修正了两处**文档陈旧**：README 的"尚未实现（P2）"里仍写着"命令行工具"，但 `cli/` 早已存在且有 58 项测试 —— 已移入"已实现"。
+
+---
+
+## 10. 第四轮：对 `b0a01a9` 之后 4 个提交的独立复验（2026-10-17 04:24）
+
+> 复核对象：`4c7b134`（懒加载 + 错误边界 + 工程基建）、`9edaf60`（Prettier 全量重排）、`21f863e`（更新日志）、`5b16dd7`（lockfile），HEAD = `5b16dd7`，工作树干净，`version` 2.2.0。
+> 方式与前几轮一致：**不采信文档，全部重跑**。本轮特别关注两件事 —— ① 新增的"门禁"是否真的能拦住东西；② 一次 71 文件的重排有没有悄悄改动行为。
+
+### 10.1 实测结果
+
+| 项目 | 命令 | 结果 |
+| --- | --- | --- |
+| 类型检查 | `tsc -p tsconfig.app.json --noEmit` | ✅ 0 错误 |
+| 单元测试 | `vitest run` | ✅ **92/92**（9 个文件） |
+| 自研路线 | 逐套跑 `tests/unit/test_*.js` | ✅ **15 套 / 234 项**，逐套明细与 `src/selfcrypto/README.md` 的表格逐行一致 |
+| 文档数字守卫 | `node scripts/check-counts.mjs` | ✅ 通过（**补充锚点后**仍通过，见 10.3） |
+| 端到端冒烟 | `node scripts/smoke.mjs` | ✅ **119/119**，失败 0 |
+| 文件头结构 | `node scripts/verify-header.mjs` | ✅ 全部通过（**修复后**，见 10.3） |
+| 浏览器 ↔ CLI 互操作 | `node scripts/interop-test.mjs` | ✅ **27/27**（单独运行时） |
+| 构建 | `vite build` | ✅ 159 模块，主包 **414.06 kB / gzip 138.01 kB** |
+| 静态审计 | 源码级 grep | ✅ `src/` 内无任何网络能力（`fetch`/XHR/WebSocket/sendBeacon/EventSource 全无）；`src/selfcrypto/` 无非相对 import（零第三方依赖） |
+
+包体积与 `CHANGELOG.md` 的数字**逐个吻合**（含 `SelfAiPage` 18.99 kB、`selfWorkerClient` 13.58 kB、`fail` 12.02 kB 三个按需 chunk），说明那份记录是真跑的。
+
+### 10.2 Prettier 全量重排：确认"只改格式"
+
+71 个文件的机械重排最危险的地方是"看起来只是换行，其实改了逻辑"。用两条独立的证据排除：
+
+1. `git diff 9edaf60^ 9edaf60 -w`（忽略空白）逐文件看 —— `sha256.js`（K 常量重排）、`encrypt.js`（三元表达式拆行）、`tsconfig.json`（数组压缩）**均无语义变化**。
+2. `git diff b0a01a9 HEAD --stat -- tests/vectors/` **输出为空** —— 测试向量文件一个字节都没动。
+
+第 2 条比第 1 条更关键：向量是交叉验证的"外部锚点"。**如果重排碰到了向量，测试就会变成自己和自己对齐，234 项全绿也不再意味着任何事。**
+
+### 10.3 发现的问题
+
+#### P2 · 文档数字仍在漂移，而且漂在守卫的盲区里（已修）
+
+- `docs/PROJECT-REPORT.md` §6 套件表写 `| 单元测试（Vitest） | 88 |`，实测 **92**；
+- `src/selfcrypto/README.md` 写"站点原有单测 88 项"，实测 **92**。
+
+`CHANGELOG.md` 的「修复」一节声称已修正"单元测试数在 4 处仍写 88"，但**被修的恰好是守卫锚住的那几处**，这两处不在锚点内，于是漏了。这不是笔误，是结构性问题：**同一个事实在文档里出现几次，就需要几个锚点**；守卫的价值不在于它查了什么，而在于**它没查的地方会静默漂移**。
+
+处理：两处改为 92；并给 `scripts/check-counts.mjs` 补了两条锚点（§6 套件表行、`站点原有单测 N 项`），做了**负向测试**（故意写回 88 → 报错、退出码 1），确认新锚点真的会响。
+
+#### P2 · `pnpm test:header` 其实是坏的，而且是**三处独立失效叠在一起**（已修）
+
+这是本轮最有价值的发现。`verify-header.mjs` 挂在 `test:all` 里，但 `CHANGELOG.md` 的验证记录表格里**没有它**——它大概从没被跑过。直接跑，依次撞上三个问题：
+
+| # | 症状 | 根因 | 修法 |
+| --- | --- | --- | --- |
+| 1 | `TypeError: Cannot read properties of undefined (reading 'click')` | 脚本**从未处理开始页**。开始页（路线二选一）会挡住主界面，此时 `[role=tab]` 是空数组，`.find(...)` 返回 `undefined` | 先按 `data-testid="start-simple"` 进「简单加密」（与 `smoke.mjs` 的 `enterSimpleMode()` 同一组标记），并给 tab 查找补判空 |
+| 2 | `Unexpected token '证', "证加密文件 ｜ 由 "…` | 文件布局是 `[明文声明前导区] ‖ [加密容器]`（`FORMAT.md` §2.3.1），而脚本把**文件起点当成容器起点**：`version` 读到了前导区标记 `0x02`，`headerLen` 落进声明正文中间，于是 JSON 从"认证加密文件"的**第二个字节**开始切 | 先解前导区算出容器起点，容器字段改按**相对偏移**读；顺带补上"声明长度/哈希与头部 `nl`/`nh` 一致"的断言 |
+| 3 | `原始文件名未正确记录（undefined）` / `原始大小…（undefined）` | 简单路线**默认开启元数据加密**，`n`/`m`/`os`/`c`/`as` 已被移出明文头部、收进 `meta.x`。原断言是**无条件**比对明文里的 `meta.n`/`meta.os` | 按 `flags & 0x04` 分流：加密时改断言「这些字段**不得**出现在明文头部，且原文件名不得出现在明文头部与声明区」——比断言字段值更强的性质 |
+
+修完实测通过，且它现在**真的在验证安全属性**：
+
+```
+文件魔数        : XUQIAN
+声明前导区      : 存在（485 字节）
+容器起点        : 496
+version / flags : 1 / 6 (gzip=on)
+算法顺序        : SM4-GCM -> CHACHA20-POLY1305 -> AES-256-GCM   ← UI 逆序，正确
+元数据加密      : 已开启（标识性字段收进 meta.x）
+原始文件名      : (已加密，明文头部不可见)
+meta.x 密文块   : 存在（100 字符 base64）
+✅ 文件头验证全部通过（明文声明前导区、算法层栈、层数、gzip、元数据、哈希均正确写入）
+```
+
+> 这三处的共同点值得记下来：**它们都不是"实现坏了"，而是"检查坏了"**。而且失效方式完全一致——先是沉默地不报错（脚本没被跑），一跑又立刻报出一个**看起来像回归、其实是旧脚本跟不上新格式**的错误。这正好印证了 10.3 开头那条：没进自动化流程的检查等于不存在。
+
+#### P3 · 报告章节编号跳号（已修）
+
+本文件从 §8 直接跳到 §10，§9 自引入起就不存在。全文无任何"本报告 §10"的引用，已回填为 §9。
+
+#### P3 · 浏览器套件之间存在顺序耦合（**未修，仅记录**）
+
+实测可复现：**`verify-header.mjs` 跑完之后，紧接着跑任何浏览器套件（interop / smoke）都会报 `等待超时: 页面加载完成`**；单独跑则正常。两次复现，与代码改动无关。
+
+- 已排除"共用调试端口"这个猜测：把 `verify-header` 的端口从 9335 换成 9336 后现象不变（改动保留，但只为端口分工，注释已如实写明它没解决这个问题）。
+- 观察到的线索：`browser.kill()` 在 Windows 上只杀启动器进程，浏览器本体仍在（`verify-header` 还会紧接着删掉它正在使用的 profile 目录）。根因未定位。
+- 影响：`test:all` 的顺序是 `smoke → header → interop`，因此**这一步组合下 interop 很可能失败**。临时绕法：两套之间留间隔或手动清残留 `msedge` 进程。
+
+#### 环境确认（非缺陷）
+
+- **`sync-docs.mjs` 在 Node 22.22.2 下静默失败**（无任何输出、非零退出），Node 24.21.0 正常 —— 与 `CHANGELOG.md`「已知环境陷阱」的记载一致，本轮再次实测复现。`pnpm dev/build/test:all` 第一步都是它，所以用 22 会得到"什么都没发生"的假象。
+- **冒烟第一次跑到第 48 项中止**（`等待超时: 密钥弹窗出现`）：Vite 检测到锁文件变化 → 重新预构建依赖 → **页面自己刷新一次**，打断流程。依赖预热稳定后重跑 **119/119 全绿**。与 `CHANGELOG.md` 的记录完全一致，属环境干扰，不是回归。
+- **沙箱内 `node tests/unit/run-all.js` 无法整体跑**（`spawnSync` 自派生 EBUSY），改用逐套调用得到 15 套 234 项。
+
+### 10.4 结论
+
+- **这 4 个提交没有引入回归。** 类型、单测、自研向量、端到端冒烟、互操作、构建全部独立复现通过；包体积从 484.43 → 414.06 kB 属实，懒加载确实把自研路线拆成了独立 chunk。
+- **新增的工程基建取向正确**，而且做的是同一件事：**把口头约定变成断言**（数字守卫、Prettier 门禁、双语字典测试），并给"白屏 vs 密钥被销毁"这个真实歧义加了错误边界（已在 `main.tsx` 实测接入）。这与本站"诚实边界"的整体思路一致。
+- **唯一的实质问题是门禁的覆盖边界**：`check-counts` 保护了被锚住的数字，于是没被锚住的数字成了盲区；`verify-header` 挂在 `test:all` 里却早已失效。两条都指向同一个教训 —— **检查本身也需要被检查**（比如"每套件最近一次通过的时间"这类元信息，比再写一条断言更有效）。
+- **仍未闭环**（沿用，非本轮引入）：① ESLint 未能在沙箱验证（依赖树不完整）；② Firefox / Safari 从未验证；③ 10.3 的浏览器套件顺序耦合；④ `SELFCRYPTO-REVIEW.md` §0.5 里的 B1（是否接口令模式）、D2（主密钥是否升 256 位）**仍待用户决策，本轮未擅自更改**。
+
+## 11. 第五轮：工作站复检与「等待超时: 页面加载完成」根因定位（2026-10-17 18:07）
+
+> 复核对象：HEAD `5b16dd7` + **7 个未提交文件**（第四轮的修复尚未提交）。Node 24.21.0（系统）/ 22.22.2（受管，带 WorkBuddy 注入的 `NODE_OPTIONS` shim）；Edge 155。本轮**只读**，未改任何源码；唯一副作用是 `public/docs/` 被重新生成了一次（原因见 11.3）。
+
+### 11.1 复跑矩阵
+
+| 项目 | 命令 | 结果 |
+| --- | --- | --- |
+| 类型检查 | `tsc -p tsconfig.app.json --noEmit`（Node 24） | ✅ 0 错误 |
+| 单元测试 | `vitest run` | ✅ **92/92**（9 文件） |
+| 自研路线 | `node tests/unit/run-all.js` | ✅ **15 套 / 234 项**（本轮可整体跑通，未复现此前记录的 `spawnSync` EBUSY） |
+| 文档数字守卫 | `node scripts/check-counts.mjs` | ✅ 通过（31 / 22 / 92 / 15 / 234） |
+| 格式 | `node_modules/.bin/prettier --check .` | ✅ 全部符合 |
+| 构建 | `vite build` | ✅ 159 模块，主包 **414.06 kB / gzip 138.01 kB**（与 CHANGELOG 完全一致） |
+| 端到端冒烟 | `node scripts/smoke.mjs`（**换到空闲端口**） | ✅ **119/119** |
+| 文件头结构 | `node scripts/verify-header.mjs` | ✅ 全部通过（前导区 485B、容器起点 496、三层逆序、`meta.x` 存在） |
+| 互操作 | `node scripts/interop-test.mjs` | ✅ **27/27**（紧随 header 运行，未复现"顺序耦合"） |
+| 文档链接 | `node scripts/sync-docs.mjs`（Node 24） | ✅ 8 篇 + 截图，链接校验通过 |
+| 静态审计 | grep | ✅ `src/` 内无 `fetch`/XHR/WebSocket/sendBeacon；无 `dangerouslySetInnerHTML`/`innerHTML=`/`eval`/`new Function`；无 TODO/FIXME |
+
+**结论：产品侧没有回归。** 92 + 234 + 119 + 27 项断言、类型、构建、格式、文档数字全部独立复现通过。
+
+### 11.2 「等待超时: 页面加载完成」的根因（上一轮的 P3"顺序耦合"）
+
+上一轮记的是"`verify-header` 之后跑浏览器套件必挂，根因未定位"。本轮抓到了现场：
+
+1. **调试端口被别的浏览器占着。** 失败时 `netstat` 显示 `127.0.0.1:9333 LISTENING`，进程命令行是：
+
+   ```
+   msedge --headless=new --remote-debugging-port=9333
+          --user-data-dir=...\Temp\wbcdp_run   ← WorkBuddy 内置预览浏览器，不是本项目的
+   ```
+
+   `scripts/smoke.mjs` 的 `waitForDevtools()` **只判断 `/json/version` 是否 200，不校验这个实例是不是自己启动的**，于是连到对方的 `about:blank`，等 `#root` 等到 60s 超时。这正是 `test:all` 里那句报错的来源。
+
+2. **同一份脚本只把 `PORT` 从 9333 改成 9347（临时副本，未入库），全套 119/119 通过。** 原先那两条"回归"也就不再出现：
+   - `自研路线「watermark」页可独立打开且元素齐备 ({"shell":true,"target":false})` —— 页面源码里 `sc-wm-input` 存在，独立探针里 `target:true`；
+   - `找不到 .XUQIAN 下载按钮` —— 用隔离页面复跑 `notes.txt`（4 KB / 2 层 / ChaCha20）到同一位置，按钮 `下载 notes.txt.XUQIAN` **确实在**。
+
+   两条都是"连错页面/冷启动懒加载"下的级联假阳性，不是产品缺陷。
+
+3. **收尾没有真正关浏览器。** `browser.kill()` 在 Windows 只杀启动器；`finally` 紧接着 `rmSync(workDir)`，把仍在运行的浏览器 profile 删掉。下一次运行更容易命中陈旧实例，或者让浏览器卡在异常状态——这是"隔一段时间就抖一次"的机制，和"套件顺序"无关。
+
+> 影响：`test:all` 在本机（只要 WorkBuddy 预览浏览器活着）**不可用**，而它恰好是唯一的自动化入口。这不是测试写得不对，是**端口所有权没有校验**。
+
+### 11.3 第二个环境陷阱：`sync-docs` 的整目录删除会被 safe-delete 拦截
+
+本机 `NODE_OPTIONS` 被注入了 WorkBuddy 的 `node-language-shim.cjs`（内含 safe-delete）。用受管 Node 22 跑：
+
+```
+node scripts/sync-docs.mjs
+→ Error: [safe-delete] 操作失败: ... public\docs: Error during a `trash` operation: Some operations were aborted
+→ 退出码 1
+```
+
+`scripts/sync-docs.mjs:81` 是 `rmSync(outDir, { recursive: true, force: true })`。**删除先发生、复制后发生**，于是失败时 `public/docs/index.html` 已被移走、目录里只剩 `images/`（本轮实际发生，已用 Node 24 重新生成恢复）。Node 24 下同一脚本正常。
+
+这解释了两件事：① `pnpm dev` / `pnpm build` / `pnpm test:all` 第一步就挂（它们都先跑 `docs:sync`，而 `node` 是 22）；② 挂法看起来"什么都没发生"或像原生崩溃，实际是可读的 shim 错误。
+
+补一条本轮实测：**`vite dev` 正在运行时再跑 `sync-docs`，Node 24 也会在同一行失败**（`public/docs` 被 dev server 占用，trash 中止），停掉 dev 后立即恢复。也就是说，这个失败模式不只与 Node 版本/shim 有关——**只要目标目录被任何进程占用，就会"删了一半"**。
+
+**项目侧可改进**（与沙箱无关，也值得做）：不要"先删整棵树再拷"，改成**逐文件覆盖 + 清理多余文件**，或写入临时目录后原子替换。这样即使中途失败，`public/docs` 也不会变成半截。
+
+### 11.4 建议（按"能不能让门禁跑起来"排序）
+
+> 2026-10-17 18:40 起，下列 1–3、6–8 已实施，验证结果见 §12。
+
+**P0 · 让自动化真正可执行**
+
+1. **调试端口可配置 + 启动前判占用**：`PORT = Number(process.env.XQ_SMOKE_PORT ?? 9411)`；启动前请求一次 `/json/version`，有人应答就报"端口 X 被占用（可能是 IDE 预览浏览器），请换端口"并退出，**不要静默连上去**。三套浏览器脚本（smoke / interop / header）同理。
+2. **收尾用 CDP `Browser.close`**，等端口释放后再删 `workDir`；`browser.kill()` 只作兜底。这样 `test:all` 连跑三套不会互相污染。
+3. `sync-docs` 改为覆盖式同步（见 11.3），或至少在 `rmSync` 前后加保护。
+
+**P1 · 工程化缺口**
+
+4. **CI**：目前 234 + 119 + 27 项只能手动跑，且没有任何远程仓库（`git remote -v` 为空）。建议至少把 `docs:sync → counts → format:check → typecheck → vitest → build` 放进 CI（E2E 可夜间跑）；本地单机 + 无远端，等于所有证据只存在于这台机器上。
+5. **提交第四轮的 7 个文件**（`CHANGELOG` / `PROJECT-REPORT` / `WORKSPACE-AUDIT` / `interop-report` / `check-counts` / `verify-header` / `selfcrypto/README`）。它们现在是"已修但未入库"的状态。
+6. **ESLint 仍未验证**：`node_modules/eslint` 目录缺失（`.bin/eslint` 是悬空 shim），本机无法跑；需在正常环境 `pnpm install` 后验证一次再接入门禁。
+7. `docs/interop-report.md` 每次运行都会重写时间戳与环境行，制造 diff 噪声；建议标注为生成物，或把时间戳/环境移到末尾单独一行。
+
+**P2 · 产品决策（需你拍板，未擅自改）**
+
+8. **刷新保护**：`beforeunload` 直接 `destroyKeySync()`，没有确认框。误按 F5 = 密钥永久丢失。可加"密钥尚未备份，确定离开？"——这与"关闭即销毁"不冲突，只是把不可逆操作从"误触"里救回来。
+9. **PWA / Service Worker**：纯本地工具最需要离线可用，比再加功能更贴合定位（README 已列为 P2）。
+10. **跨浏览器**：至今只验证过 Edge/Chromium。至少做一次 Firefox + Safari 手工矩阵（重点：Worker、`crypto.subtle`、剪贴板、下载）。
+11. **发布**：`version` 仍 2.2.0，CHANGELOG 的 `[未发布]` 建议 2.3.0；无远端 = 无备份，建议私有仓库 + tag。
+
+## 12. 第五轮修复记录（2026-10-17 18:40–19:10）：§11 的建议已实施
+
+> 用户裁定「全做」。本节只记**实际改动与验证结果**，不改写 §11 的复检结论（那一节是当时的现场）。
+
+### 12.1 测试基础设施
+
+| 改动 | 文件 | 验证 |
+| --- | --- | --- |
+| 端口可配置 + 启动前判占用 | `scripts/lib/devtools.mjs`（新）、smoke / header / interop | 9333 被 wbcdp 占用时 smoke 现在**立即报错并给出换端口提示**，不再等 60 秒 |
+| 收尾用 CDP `Browser.close`，等端口释放后再删 profile | 同上 + `browser-harness.mjs` | 跑完 `9411–9414` 无 LISTENING、无残留 headless 进程 |
+| 默认端口改为 9411/9412/9413/9414 | 三套脚本 + harness | smoke 119（118+1 备注）、header 通过、interop 27/27，**header → interop 连续跑无复现** |
+| beforeunload 确认框的自动化处理 | `scripts/lib/browser-harness.mjs`、`smoke.mjs` | 三处 `Page.reload` 全部正常，未被对话框卡住 |
+
+### 12.2 产品
+
+- **PWA 离线壳**：`src/app/pwa.ts`、`public/manifest.webmanifest`、`scripts/sw-template.js`、
+  `vite.config.ts` 的 `offlineServiceWorker()` 插件、`scripts/gen-icons.mjs`（纯 Node 生成 PNG）。
+  新增 `scripts/verify-offline.mjs`（5 项）：真构建 → 真 preview → **CDP 断网** → 刷新仍启动 →
+  断网下完成一次文本加密。实测 **5/5**。
+- **刷新确认**：`src/worker/client.ts` 在密钥存在时 `preventDefault()`，只在 `pagehide` 销毁密钥。
+  自动化里由 CDP 自动接受对话框，真实用户看到浏览器原生提示。
+
+### 12.3 工程
+
+- `sync-docs.mjs` 改覆盖式同步；实测 **Node 22 + shim + vite dev 运行中** 也能成功（旧实现两种组合都失败）。
+- `.github/workflows/ci.yml`：`quality`（每次 push/PR：counts → lint → format → typecheck → vitest → build）
+  与 `e2e`（手动触发：smoke / header / interop / offline）。**尚未在真实 GitHub Actions 上跑过**。
+- `package.json` → 2.3.0、`packageManager: pnpm@11.7.0`、新增 `test:offline` / `gen:icons`，
+  `test:all` 末尾追加离线套件。
+- 文档：README（PWA、刷新保护、体积、目录树、调试端口）、TESTING（§四 修正为元数据加密后的真实断言、新增 §四·补）、
+  CHANGELOG（2.3.0）。
+
+### 12.4 本轮全量复跑（Node 24.21.0）
+
+```
+tsc 0 错误 · vitest 92/92 · 自研 15 套 234 项 · counts 通过 · prettier 通过
+build 160 模块，主包 414.28 kB / gzip 138.12 kB，sw.js 2.91 kB
+smoke 119（失败 0，备注 1）· header 通过 · interop 27/27 · offline 5/5
+```
+
+### 12.5 仍未闭环
+
+1. **ESLint 本机不可运行**（依赖目录缺失）—— 已放进 CI，等首次 CI 结果。
+2. **CI 未实跑**（本地无网络/无远端），workflow 里的 preview 与浏览器路径按 Ubuntu 预装 Chrome 编写。
+3. **PWA 的"安装"动作**（地址栏点安装）无法自动化，只验证了注册、接管与离线可用。
+4. Firefox / Safari 仍未验证。
 
 ---
 
