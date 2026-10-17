@@ -1,7 +1,7 @@
 {
   "name": "xuqian-cipher",
   "private": true,
-  "version": "2.3.0",
+  "version": "2.4.0",
   "description": "XUQIAN 加密站 / 许七安密匣 — 纯前端本地文件加密工具",
   "type": "module",
   "bin": {
