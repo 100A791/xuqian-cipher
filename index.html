@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="color-scheme" content="dark light" />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="theme-color" content="#0b0f14" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <!--
+      CSP：禁止任何外部资源与外发请求，只允许同源自身资源。
+      connect-src 保留 'self' 而不是收紧为 'none'：dev 模式下 Vite HMR 需要同源
+      WebSocket（'none' 会让每次保存代码都在控制台报 CSP 错）；生产环境应用本身
+      零网络请求，'self' 也不会放行任何第三方域名。
+      纯前端应用必须在 HTTPS 下部署（见 README 安全说明）。
+      worker-src 'self' blob: 供加密 Worker 使用。
+      ⚠ 这里**不写** `frame-ancestors`：该指令只认响应头，写在 <meta> 里浏览器会直接忽略
+      （控制台会提示 "The Content Security Policy directive 'frame-ancestors' is ignored when
+      delivered via a <meta> element"）。点击劫持防护需要在托管侧加响应头，见 docs/SECURITY.md。
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; worker-src 'self' blob:; manifest-src 'self'; base-uri 'none'; form-action 'none'"
+    />
+    <title>XUQIAN 加密站 / 许七安密匣</title>
+    <meta name="description" content="纯前端本地加密：文件与密钥永不上传。128 位密钥只展示一次，关闭即销毁。" />
+    <script type="module" crossorigin src="./assets/index-R4K5SAoW.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-AC-kquSf.css">
+  </head>
+  <body>
+    <div id="root"></div>
+    <noscript>本工具全部加密运算在浏览器本地完成，必须启用 JavaScript。</noscript>
+  </body>
+</html>
