@@ -3,6 +3,9 @@
 > 纯前端、浏览器本地完成的文件加密工具。文件与密钥**永不上传服务器**。
 > 每次加密生成一把 **128 位主密钥**，**只展示一次**，关闭弹窗立即销毁，网站不保存、不上传、不提供任何后门。
 
+**在线版**：<https://100a791.github.io/xuqian-cipher/> （GitHub Pages，由 `gh-pages` 分支发布）
+**源码**：<https://github.com/100A791/xuqian-cipher> ｜ 许可证：MIT
+
 - 加密输出统一使用 `.XUQIAN` 后缀（例如 `photo.jpg` → `photo.jpg.XUQIAN`）
 - 主密钥可用 `.XUQIANKEY` 文件备份（支持密码保护）
 - 支持 1~10 层多算法叠加，解密严格逆序
