@@ -83,7 +83,9 @@ try {
   for (let i = 0; i < 80; i++) {
     try {
       if ((await fetch(`http://127.0.0.1:${PORT}/json/version`)).ok) break
-    } catch {}
+    } catch {
+      // 浏览器还没就绪：继续轮询（下一轮再取 /json/version）
+    }
     await sleep(250)
   }
   const list = await (await fetch(`http://127.0.0.1:${PORT}/json/list`)).json()
@@ -98,7 +100,8 @@ try {
     if (msg.id && pending.has(msg.id)) {
       const { resolve, reject } = pending.get(msg.id)
       pending.delete(msg.id)
-      msg.error ? reject(new Error(msg.error.message)) : resolve(msg.result)
+      if (msg.error) reject(new Error(msg.error.message))
+      else resolve(msg.result)
     }
   })
   await send('Runtime.enable')
@@ -350,13 +353,19 @@ try {
   // 而下一行删 profile 会让下一次运行更容易撞上"陈旧实例"。
   try {
     ws?.send(JSON.stringify({ id: 99999, method: 'Browser.close' }))
-  } catch {}
+  } catch {
+    // 已经断开：忽略
+  }
   try {
     ws?.close()
-  } catch {}
+  } catch {
+    // 连接可能已断：收尾阶段不因 close 失败而抛
+  }
   browser.kill()
   await waitPortReleased(PORT)
   try {
     rmSync(workDir, { recursive: true, force: true })
-  } catch {}
+  } catch {
+    // 临时目录可能仍被浏览器占用：失败不影响测试结论
+  }
 }

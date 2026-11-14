@@ -41,9 +41,9 @@ import {
   detectAIWatermark,
 } from '../../src/selfcrypto/ai/report.js'
 import { createImage, streamBytes } from '../../src/selfcrypto/watermark/lsb.js'
-import { embedWatermark, extractWatermark } from '../../src/selfcrypto/watermark/extract.js'
+import { embedWatermark } from '../../src/selfcrypto/watermark/extract.js'
 import { setUniformDelayRange } from '../../src/selfcrypto/common/delay.js'
-import { assertEqual, assertTrue, bytesToHex, createRunner } from './_helpers.js'
+import { assertEqual, assertTrue, createRunner } from './_helpers.js'
 
 const runner = createRunner('AI 检测（元数据 / 频域 / 噪声 / 色彩 / 边缘 / 报告）')
 setUniformDelayRange([0, 0])
@@ -442,12 +442,6 @@ await runner.test('边缘：纯色无响应、阶跃响应集中、渐变响应�
 
 /** 造一个常量平面。 */
 const constPlane = (n, v) => Float64Array.from({ length: n * n }, () => v)
-/** 造一个脉冲平面（只有一个非零）。 */
-const impulsePlane = (n) => {
-  const p = new Float64Array(n * n)
-  p[0] = 1
-  return p
-}
 /** 造一个余弦平面（在 x 方向频率为 k）。 */
 const cosinePlane = (n, k) => {
   const p = new Float64Array(n * n)

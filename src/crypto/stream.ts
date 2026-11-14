@@ -47,7 +47,7 @@ import { copyBytes, zeroize } from './zeroize.ts'
 import { sha256 } from '@noble/hashes/sha2.js'
 
 /** 可重复迭代的字节源：加密需要两遍（先算 meta.h，再加密）。 */
-export interface ByteSource extends AsyncIterable<Uint8Array> {}
+export type ByteSource = AsyncIterable<Uint8Array>
 
 /** 字节汇：每块处理完立刻写入，绝不累积。 */
 export interface ByteSink {

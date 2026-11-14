@@ -12,7 +12,7 @@ import { createHmac, createDecipheriv, createCipheriv } from 'node:crypto'
 
 import { encryptFile } from '../../src/selfcrypto/file/encrypt.js'
 import { checkKey, decryptFile } from '../../src/selfcrypto/file/decrypt.js'
-import { HEADER_LEN, parseHeader, splitFile } from '../../src/selfcrypto/file/format.js'
+import { HEADER_LEN, parseHeader } from '../../src/selfcrypto/file/format.js'
 import { MAC_LEN, MAGIC, CHUNK_SIZE } from '../../src/selfcrypto/common/constants.js'
 import { setInternalDiagnostics } from '../../src/selfcrypto/common/fail.js'
 import { resetUniformDelayRange, setUniformDelayRange } from '../../src/selfcrypto/common/delay.js'

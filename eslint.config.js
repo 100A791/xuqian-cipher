@@ -21,7 +21,18 @@ import reactHooks from 'eslint-plugin-react-hooks'
 
 export default tseslint.config(
   {
-    ignores: ['dist/**', 'public/**', 'node_modules/**', 'certs/**', 'coverage/**', '**/*.XUQIAN', '**/*.XUQIANKEY'],
+    // publish/ 是 `pnpm site:sync` 从 dist 复制出来的构建产物，不是源码。
+    // 2026-10-30：它曾贡献 2082/2112 个 error（压缩代码被当源码检查）。
+    ignores: [
+      'dist/**',
+      'publish/**',
+      'public/**',
+      'node_modules/**',
+      'certs/**',
+      'coverage/**',
+      '**/*.XUQIAN',
+      '**/*.XUQIANKEY',
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
@@ -64,6 +75,8 @@ export default tseslint.config(
         self: 'readonly',
         caches: 'readonly',
         clients: 'readonly',
+        // 构建时由 vite.config.ts 内联替换成预缓存清单（不是运行时全局）
+        __PRECACHE__: 'readonly',
       },
     },
   },

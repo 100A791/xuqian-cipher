@@ -227,7 +227,7 @@ if (assertionValues.size > 1) {
  * 新建测试文件却忘了写进文档，就是靠这条抓出来的。
  */
 const testingDoc = read('docs/TESTING.md')
-const listedCases = [...testingDoc.matchAll(/^### 2\.\d+ .*（`([A-Za-z0-9.\-]+\.test\.ts)`，(\d+) 项）/gm)]
+const listedCases = [...testingDoc.matchAll(/^### 2\.\d+ .*（`([A-Za-z0-9.-]+\.test\.ts)`，(\d+) 项）/gm)]
 const listedSum = listedCases.reduce((sum, m) => sum + Number.parseInt(m[2], 10), 0)
 const listedNames = new Set(listedCases.map((m) => m[1]))
 const actualNames = testFileNames.map((p) => p.split('/').pop())

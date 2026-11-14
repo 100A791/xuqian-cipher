@@ -16,10 +16,13 @@
       零网络请求，'self' 也不会放行任何第三方域名。
       纯前端应用必须在 HTTPS 下部署（见 README 安全说明）。
       worker-src 'self' blob: 供加密 Worker 使用。
+      ⚠ 这里**不写** `frame-ancestors`：该指令只认响应头，写在 <meta> 里浏览器会直接忽略
+      （控制台会提示 "The Content Security Policy directive 'frame-ancestors' is ignored when
+      delivered via a <meta> element"）。点击劫持防护需要在托管侧加响应头，见 docs/SECURITY.md。
     -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; worker-src 'self' blob:; manifest-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+      content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; worker-src 'self' blob:; manifest-src 'self'; base-uri 'none'; form-action 'none'"
     />
     <title>XUQIAN 加密站 / 许七安密匣</title>
     <meta name="description" content="纯前端本地加密：文件与密钥永不上传。128 位密钥只展示一次，关闭即销毁。" />

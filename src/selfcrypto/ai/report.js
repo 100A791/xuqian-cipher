@@ -95,8 +95,8 @@ export async function detectAIWatermark(image, options = {}) {
   const measurements = analyzeAll(image, options.fileBytes ?? null)
 
   // ① 直接读本项目的 LSB 水印（最硬的证据：能读出公开头就是真的嵌过）
-  let found = null
-  let watermarkScore = 0
+  let found
+  let watermarkScore
   try {
     const { extractWatermark } = await import('../watermark/extract.js')
     const result = await extractWatermark(image, options.keyWK ?? null)

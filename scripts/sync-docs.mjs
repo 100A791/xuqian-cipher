@@ -27,6 +27,7 @@ const docFiles = [
   'docs/KEY-LIFECYCLE.md',
   'docs/PROJECT-REPORT.md',
   'docs/PERFORMANCE.md',
+  'docs/API.md',
 ]
 
 /** 校验：Markdown 中的相对链接目标必须存在；不得使用非 ASCII 锚点。 */
@@ -165,6 +166,7 @@ const index = `<!doctype html>
     <li><a href="./SECURITY.md"><b>安全模型与风险提示</b><span>威胁模型、诚实披露、密码学实现说明</span></a></li>
     <li><a href="./TESTING.md"><b>测试用例与验收标准</b><span>单元测试 / 冒烟测试 / 验收 20 条逐条对照</span></a></li>
     <li><a href="./KEY-LIFECYCLE.md"><b>密钥一次性展示与销毁机制</b><span>实现详解 + 零残留验证方法</span></a></li>
+    <li><a href="./API.md"><b>本地 API 与 skill 接口</b><span>端点、鉴权、请求字段、错误码与安全边界</span></a></li>
     <li><a href="./README.md"><b>项目总览 README</b><span>快速开始、功能清单、部署清单</span></a></li>
   </ul>
 </main>

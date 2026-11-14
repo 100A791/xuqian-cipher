@@ -6,7 +6,7 @@
  * 避免两处重复维护同一套 CDP 管道。
  */
 import { spawn } from 'node:child_process'
-import { mkdtempSync, mkdirSync, rmSync } from 'node:fs'
+import { existsSync, mkdtempSync, mkdirSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 

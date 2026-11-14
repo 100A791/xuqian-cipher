@@ -197,12 +197,18 @@ connect-src 'self';
 worker-src 'self' blob:;
 manifest-src 'self';
 base-uri 'none';
-form-action 'none';
-frame-ancestors 'none'
+form-action 'none'
 ```
 
-含义：页面**无法**发起任何跨域请求，无法加载第三方脚本，无法被 iframe 嵌套。
+含义：页面**无法**发起任何跨域请求，无法加载第三方脚本。
 若你需要接入分析或 CDN，必须修改 CSP —— 那会削弱以上保证，请谨慎评估。
+
+> **点击劫持（iframe 嵌套）防护：当前未由本站提供。**
+> `frame-ancestors` 是**响应头专属**指令，写在 `<meta>` 里浏览器会直接忽略（控制台会提示
+> "The Content Security Policy directive 'frame-ancestors' is ignored when delivered via a <meta> element"）。
+> 本站是纯静态站点，页面自身无法设置响应头，所以此前写在 meta 里的 `frame-ancestors 'none'`
+> **并没有真正生效**，已从 meta 中移除以免造成虚假安全感。需要该防护时，请在托管侧加：
+> `Content-Security-Policy: frame-ancestors 'none'` 或 `X-Frame-Options: DENY`。
 
 建议在 Web 服务器追加的响应头见 [README 部署清单](../README.md#部署)。
 

@@ -15,7 +15,7 @@
  *   node scripts/install-hooks.mjs        # 安装/更新 pre-commit + pre-push
  *   删除：rm .git/hooks/pre-commit .git/hooks/pre-push
  */
-import { chmodSync, copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'

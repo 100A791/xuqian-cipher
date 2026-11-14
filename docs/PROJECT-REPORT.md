@@ -296,15 +296,17 @@ UI：弹密钥窗（展示一次）→ 关闭即销毁；密文落盘为 .xuqian
 
 | 项目 | 值 |
 | --- | --- |
-| 主站 | `http://127.0.0.1:5188/` |
+| 主站 | `http://127.0.0.1:5188/`（`scripts/serve.mjs` 服务**构建产物** `publish/`） |
 | 文档 | `http://127.0.0.1:5188/docs/index.html` |
 | 预览 | `http://127.0.0.1:5189/`（`pnpm preview`） |
-| 启动 | 双击项目根 `start-xuqian.bat`（自愈安装依赖 → 起服务器 → 自动开浏览器；关闭服务器窗口即停）；同名 `start-xuqian.cmd` 是兼容转发文件；用户「启动」文件夹里的 `xuqian-dev.cmd` 负责登录自启（只起服务器、不开浏览器） |
+| 启动 | **本地部署 + 开机自启**：「启动」文件夹里的 `xuqian-local.cmd` 在登录时拉起站点与 API，端口已在监听就跳过；`pnpm serve` / `pnpm api` 可手动各起一个。`start-xuqian.bat` 保留为开发模式入口（起 Vite dev server 并开浏览器），旧的 `xuqian-dev.cmd` 已删除（会与 5188 抢端口） |
+| 本地 API | `http://127.0.0.1:5190/`（`scripts/xq-api.mjs`）：`/v1/encrypt` `/v1/decrypt` 按输入形态分派，另有 keygen / inspect / verify / auth / health / methods。规格见 [`API.md`](./API.md) |
+| API 凭据 | 长期 API Key（`xq_…`，磁盘只存 sha256；`pnpm keys add/list/revoke/path`）或会话令牌（每次启动随机，`%TEMP%\xuqian-api-token.json`） |
 | 文档同步 | 改 `docs/` 或 `README.md` 后必须 `pnpm docs:sync`（同步到 `public/docs/` 并校验死链与非 ASCII 锚点） |
 | 一键全量验证 | `pnpm test:all` = docs:sync → 数字守卫 → 格式 → typecheck → 单测 → 构建 → CLI → 冒烟 → 文件头 → 互操作 → 离线壳 |
 | CLI 的 Node 要求 | `bin` 现指向启动器 `cli/xuqian.mjs`：Node ≥ 23.6 直跑 `.ts`，22.6~23.5 自动加 `--experimental-strip-types` 重启，更老的给明确提示（不再抛 `Unknown file extension ".ts"`）。网站本身仍只需 Node ≥ 20.19 |
 
-**环境事实（本机）**：Node 在 `C:\Users\xuqian\AppData\Local\Programs\nodejs`，pnpm 11.7.0。pnpm 11 默认阻止依赖构建脚本，esbuild 被拦会报 `ERR_PNPM_IGNORED_BUILDS` 并让安装以 exit 1 结束（症状是"服务起不来"）；修法已落在 `pnpm-workspace.yaml` 的 `allowBuilds`。**本机已初始化 git 仓库**（2026-10-16 起），提交前钩子跑 数字守卫 → 格式 → 类型 → 单测；目前仍**无远端**，建议尽快推到一个私有远端做备份。
+**环境事实（本机）**：Node 在 `C:\Users\xuqian\AppData\Local\Programs\nodejs`，pnpm 11.7.0。pnpm 11 默认阻止依赖构建脚本，esbuild 被拦会报 `ERR_PNPM_IGNORED_BUILDS` 并让安装以 exit 1 结束（症状是"服务起不来"）；修法已落在 `pnpm-workspace.yaml` 的 `allowBuilds`。**仓库有 git 历史**（`.git`，21 次提交 + tag v2.3/2.4/2.5，无远端），但**本机 `git` 不在 PATH**：`scripts/release.mjs`、`install-hooks.mjs` 与提交前钩子都跑不了，发版只能手工改版本号 + CHANGELOG。
 
 ---
 
@@ -315,6 +317,11 @@ UI：弹密钥窗（展示一次）→ 关闭即销毁；密文落盘为 .xuqian
 - v2.1：纯前端加密站全部主体功能、配图手册、文档体系。
 - v2.2：流式引擎、命令行工具、密钥自检、浏览器 ↔ CLI 双向互操作、加密声明（明文前导区）、人可读文件头。
 - v2.3：PWA 离线壳（断网可用）、刷新确认（密钥未销毁时防误关）、CI 工作流、浏览器测试端口卫生与真正收尾。
+- v2.4：时间锁（`meta.nbf` / `meta.exp`，解密端在解出任何明文之前强制校验，窗口外抛 `TimeLockError`）。
+- v2.5：工具箱「更新日志」面板——数据源是仓库 `CHANGELOG.md`，经 `?raw` 打包进应用，**离线也可查**。
+- v2.6（2026-10-30）：**本地部署**（`scripts/serve.mjs` 服务 `publish/`）+ **开机自启**（`xuqian-local.cmd`）；
+  **本地 API** `scripts/xq-api.mjs`（只绑 5190、API Key / 会话令牌、加密方式可选 1~10 层、口令密钥、
+  数据模式 base64url、形态决定输出）；**skill 接口**；新增 `docs/API.md`；**lint 2112 error → 0**。
 - 开始页二选一；环境自愈（`start-xuqian.bat` 缺依赖自动安装、缺 node/pnpm 给出指引）。
 - **自研路线 SPEC 阶段零～七全部落地**：算法（5 套向量）→ 文件格式与加解密（含与 OpenSSL 双向交叉验证）→ 图片水印（LSB 公开/私有层 + 有形水印的角落与全图平铺两种样式）→ AI 检测（JPEG/PNG/WebP 结构解析 + HEIC/AVIF 标记扫描；**DCT + FFT + DWT 三种变换**）→ 界面（五个入口）→ 存储与部署（IndexedDB + 整库备份 + dist）→ 测试与验收（15 套 234 项）。
 - 界面与体验闭环：有形水印接入界面并真浏览器量化验证；**大文件加密搬进 Web Worker**（不卡界面 + 真实分阶段进度 + 可取消）。
@@ -333,7 +340,10 @@ UI：弹密钥窗（展示一次）→ 关闭即销毁；密文落盘为 .xuqian
 | `engines` 与 CLI 的 Node 要求不一致 | `engines.node >= 20.19`（网站开发够用），但 CLI 需要 ≥ 22.6。`bin` 已指向启动器 `cli/xuqian.mjs`：低版本会给出明确提示并以 1 退出，不再抛 `Unknown file extension ".ts"`。残留问题是"装得上、但 CLI 跑不了"这一层仍存在 |
 | 本地密文库**已有导出/导入备份** | 清浏览器数据后可用备份恢复（备份里只有密文与文件名，没有密钥）；配额告警与自动清理仍未做 |
 | 离线单文件版（双击 HTML 免端口） | 用户指示"先本地部署"，暂缓 |
-| 项目版本控制 | 没有（本机无 git，本目录也不是 git 仓库） |
+| 项目版本控制 | 仓库在（`.git`，21 次提交 + tag v2.3/2.4/2.5，无远端），但**本机 `git` 不在 PATH**：无法提交、打 tag、跑 `release` 与提交钩子。2.6.0 已手工 bump，**待提交** |
+| 线上部署 | 线上 <https://xuqian-cipher.app.workbuddy.host/> 仍是 2.4.0（缺 v2.5/v2.6 与 CSP 修复），需重新部署 `publish/` |
+| 浏览器套件未跑 | smoke / header / interop / offline 本轮未执行：用户明令**未经同意不得自动化浏览器**（这是红线，不是遗漏） |
+| API 无自动化测试 | 目前只有手工验收（见 [`API.md`](./API.md) 第 12 节），未纳入 `pnpm test:all` |
 | ~~文档欠账~~ **已修** | `docs/GUIDE.md` 的截图章节已改为：脚本产出 **24 张** + `now-*` 现状图 **7 张** = 目录内共 **31 张**（并补上了漏列的 `08a/08b`；`now-06/now-07` 已被本报告引用） |
 
 ### 本次修订同步过的判断

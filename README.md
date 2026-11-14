@@ -32,6 +32,7 @@
 | **[docs/PROJECT-REPORT.md](docs/PROJECT-REPORT.md)** | ★ 综合报告：网页内容框架、两条加密路线、格式、架构、安全、测试、进度、待拍板参数 |
 | **[docs/GUIDE.md](docs/GUIDE.md)** | ★ 分区操作手册（配图版）：加密 / 解密 / 文本 / 工具逐步说明，31 张真实截图（脚本产出 24 + 现状图 7） |
 | **[docs/PERFORMANCE.md](docs/PERFORMANCE.md)** | ★ 性能基准：算法层 / 文件加解密 / 水印 / AI 检测的实测数字（`pnpm bench` 可复跑） |
+| **[docs/API.md](docs/API.md)** | ★ 本地 API 与 skill 接口：端点、鉴权（API Key / 会话令牌）、请求字段、错误码、安全边界 |
 | [docs/FORMAT.md](docs/FORMAT.md) | `.XUQIAN` 与 `.XUQIANKEY` 字节级格式规范 |
 | [docs/SECURITY.md](docs/SECURITY.md) | 安全模型、威胁边界与诚实披露 |
 | [docs/TESTING.md](docs/TESTING.md) | 测试用例与验收标准逐条对照 |
@@ -49,21 +50,44 @@
 
 ### 本地运行
 
+**推荐：本地部署 + 开机自启（不用点任何东西）**
+
 ```bash
-pnpm install
+# 一次性：构建并同步到发布目录（publish/）
+pnpm build && pnpm site:sync
 
-# HTTP 开发服务器（固定端口 5188，避免与其他服务冲突）
-pnpm dev
-# → http://127.0.0.1:5188/
-
-# 如果想用 HTTPS 本地预览（需要本机 openssl）
-pnpm dev:https
-# → https://127.0.0.1:5443/
+# 之后：服务由「启动」文件夹里的 xuqian-local.cmd 在登录时自动拉起
+#   站点（构建产物）http://127.0.0.1:5188/
+#   本地 API        http://127.0.0.1:5190/
 ```
 
-> Windows 用户可以直接双击项目根的 **`start-xuqian.bat`**：
-> 自动检查 node / pnpm、缺依赖时自动安装、启动服务器并**自动打开浏览器**；
-> 关闭弹出的"XUQIAN dev server"窗口即停止服务。同名 `start-xuqian.cmd` 是给旧快捷方式用的转发文件。
+- `xuqian-local.cmd` 用 `where /r` 定位 `scripts/serve.mjs`（纯 ASCII，不含中文路径），
+  端口已在监听就跳过，所以重复登录/手动再跑都不会起重复进程。
+- 取消自启：删除 `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\xuqian-local.cmd`。
+- 服务只绑 `127.0.0.1`；关掉对应窗口（或结束 node 进程）即停止。
+- 只想临时手动起一次：`pnpm serve`（静态部署，5188） / `pnpm api`（本地 API，5190）。
+
+**接口给程序用**：本地 API 只绑回环、必须带凭据（长期 API Key 或会话令牌），
+传文件得到文件、传字符串得到 base64url 数据。端点、字段与错误码见
+[`docs/API.md`](docs/API.md)；`pnpm keys add <标签> --save` 生成 API Key（明文只显示一次）。
+
+开发模式（改源码时用，会与上面的 5188 冲突，先停服务或换端口）：
+
+```bash
+pnpm install
+pnpm dev          # Vite 开发服务器 → http://127.0.0.1:5188/
+pnpm dev:https    # HTTPS 本地预览（需本机 openssl）→ https://127.0.0.1:5443/
+```
+
+> Windows 用户也可以双击项目根的 **`start-xuqian.bat`**：自动检查 node / pnpm、缺依赖时自动安装、
+> 启动开发服务器并自动打开浏览器；关闭弹出的窗口即停止。同名 `start-xuqian.cmd` 是给旧快捷方式用的转发文件。
+> 它跑的是**开发服务器**，不是上面那套开机自启的部署服务。
+
+> ⚠ **不要直接双击 `index.html`（也不要双击 `dist/index.html`）**。
+> 根 `index.html` 是 Vite 的**源码入口**（`<script src="/src/main.tsx">`），必须在 HTTP 服务下运行；
+> `dist/` 的产物同理：`file://` 下浏览器会拦掉 ES 模块（`Access to script at 'file:///…' blocked by CORS`）、
+> Service Worker 无法注册，`manifest.webmanifest` / `favicon.svg` 也会 404。
+> 正确入口：本机 <http://127.0.0.1:5188/>（开机自启）或线上 <https://xuqian-cipher.app.workbuddy.host/>。
 
 > 端口 3000 / 3080 / 3081 已被其他服务占用，本项目默认使用 **5188**（开发）与 **5189**（预览）。
 > `localhost` 属于浏览器认可的安全上下文，`crypto.subtle`、Web Worker、剪贴板 API 均可正常使用。

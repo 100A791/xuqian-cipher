@@ -66,7 +66,6 @@ import {
   noticeExpectation,
   noticeHash,
   readPreamble,
-  skippingSource,
 } from '../src/crypto/banner.ts'
 import { base64ToBytes, bytesToBase64, bytesToHex, hexToBytes } from '../src/crypto/encoding.ts'
 import { copyBytes, zeroize } from '../src/crypto/zeroize.ts'
@@ -652,7 +651,7 @@ export async function cmdInspect(values, inputs) {
     try {
       preamble = readPreamble(prefix)
     } catch {
-      preamble = null
+      // 旧格式（标记字节=1）没有明文声明前导区：保持 null，容器从偏移 0 开始
     }
     const offset = preamble ? preamble.containerOffset : 0
     let header

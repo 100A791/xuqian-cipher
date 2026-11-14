@@ -21,11 +21,10 @@
  *   42    38   保留（必须为 0）
  */
 import { FormatError } from '../file/format.js'
-import { concatBytes, copyBytes, utf8Decode, utf8Encode } from '../common/bytes.js'
+import { copyBytes, utf8Decode, utf8Encode } from '../common/bytes.js'
 import { assertBytes } from '../common/validate.js'
 import { fail } from '../common/fail.js'
 import {
-  LAYER_HEADER_LEN,
   embedLayer,
   extractLayer,
   planSlots,

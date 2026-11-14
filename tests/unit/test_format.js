@@ -11,7 +11,6 @@ import {
   FormatError,
   assembleFile,
   defaultHeader,
-  fileLayout,
   parseHeader,
   serializeHeader,
   splitFile,

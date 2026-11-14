@@ -8,6 +8,59 @@
 
 ---
 
+## [2.6.0] - 2026-10-30
+
+> 主题：**本地部署与可编程接口**。打开浏览器就是构建产物、登录即起服务，另加只绑回环的本地 API
+> 与 skill 接口；顺带把 lint 从 2112 个 error 清到 0。
+
+### 新增
+
+- **本地静态部署** `scripts/serve.mjs`：服务的是**构建产物** `publish/`（不是源码），只绑
+  `127.0.0.1:5188`。带 MIME、`index/sw/manifest` 走 `no-cache`、带哈希资源 immutable、
+  路径穿越防护、SPA 回退；端口被占**直接报错退出**，不去抢别人的端口。
+- **开机自启** `…\Startup\xuqian-local.cmd`：纯 ASCII、用 `where /r` 定位脚本（避开中文路径），
+  登录时拉起站点与 API；端口已在监听就跳过，重复登录不会起重复进程。
+- **本地 API** `scripts/xq-api.mjs`（`127.0.0.1:5190`）：`/v1/encrypt`、`/v1/decrypt`
+  按**输入形态**分派——`inputs`（文件）→ 输出文件，`text`/`token`（数据）→ base64url 字符串；
+  同时给两者返回 400。另有 `/v1/encrypt-text`、`/v1/decrypt-text`（等价别名）、
+  `/v1/keygen`、`/v1/inspect`、`/v1/verify`、`/v1/auth`、`/v1/health`、`/v1/methods`。
+- **凭据**：长期 **API Key**（`xq_…`，磁盘只存 sha256；`pnpm keys add/list/revoke/path`
+  管理，每请求重读，吊销立即生效）+ **会话令牌**兜底（每次启动随机，写在 `%TEMP%`）。
+- **加密方式可选**：`layers` 1~10 层、5 种算法（AES-128/256-GCM、ChaCha20、XChaCha20、SM4-GCM）；
+  支持**口令保护的密钥**（`keyPassword`）。
+- **解密选项**：`checkOnly`（只验密钥与首块认证、不返回明文）、`expectAlgorithm`/`expectLayers`
+  （钉死算法链）、`out`/`force`。
+- **skill 接口**：`~/.dsh/skills/xuqian-crypto/SKILL.md`（仓库外），端口优先、CLI 兜底。
+- **meta CSP**：`default-src 'none'` + 同源脚本/样式/worker。刻意**不写** `frame-ancestors`
+  ——写在 `<meta>` 里浏览器会直接忽略，留着只会变成虚假防护。
+
+### 变更
+
+- 启动方式：从「双击 `start-xuqian.bat` 起开发服务器」改为**本地部署 + 开机自启**；
+  `start-xuqian.bat` 保留为开发模式入口，旧的 `xuqian-dev.cmd` 已删除（它会与 5188 抢端口）。
+- API 安全：任何带 `Origin` 的请求一律 403；请求体上限 1 MiB；只监听回环地址。
+
+### 修复
+
+- 数据模式解密（`/v1/decrypt-text`）漏传 `--json`，导致调用方拿不到结构化结果。
+- `publish/` 内嵌版本落后于 `package.json`（重新构建 + `site:sync` 后一致）。
+- `scripts/lib/browser-harness.mjs` 使用 `existsSync` 却未导入（等待下载落盘的轮询会直接
+  `ReferenceError`）。
+
+### 文档
+
+- 新增 **`docs/API.md`**：端点、鉴权、请求字段、响应示例、错误码、安全边界，全部配实测结果。
+- README 文档表、文档索引页、`sync-docs` 的文档清单同步收录。
+
+### 工程
+
+- **lint 归零**：`eslint .` 从 **2112 error** 到 **0**。其中 2082 个来自 `publish/` 构建产物
+  被当源码检查（已加 ignore），其余 30 处逐项修（未使用导入/变量、空 catch、三元表达式当语句等），
+  并删掉 `scripts/smoke.mjs` 里一段什么都不做的空循环。
+- 测试与构建基线不变：tsc 0 / vitest 102 / 自研 15 套 234 项 / CLI 58 / build 64 文件可复现。
+
+---
+
 ## [2.5.0] - 2026-10-17
 
 > 主题：**更新日志功能**。工具箱新增「更新日志」面板，展示每个版本的完整更新内容。

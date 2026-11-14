@@ -341,10 +341,6 @@ const workDir = mkdtempSync(join(tmpdir(), 'xuqian-smoke-'))
 const profileDir = join(workDir, 'profile')
 const downloadDir = join(workDir, 'downloads')
 const fixtureDir = join(workDir, 'fixtures')
-for (const dir of [profileDir, downloadDir, fixtureDir]) {
-  writeFileSync(join(workDir, '.keep'), '')
-  rmSync(join(workDir, '.keep'), { force: true })
-}
 const { mkdirSync, readdirSync } = await import('node:fs')
 for (const dir of [profileDir, downloadDir, fixtureDir]) mkdirSync(dir, { recursive: true })
 

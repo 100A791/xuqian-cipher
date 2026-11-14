@@ -134,7 +134,7 @@ async function walkEntry(entry: FileSystemEntry, prefix: string, out: DroppedEnt
   }
   if (entry.isDirectory) {
     const reader = (entry as FileSystemDirectoryEntry).createReader()
-    let batch: FileSystemEntry[] = []
+    let batch: FileSystemEntry[]
     do {
       batch = await new Promise<FileSystemEntry[]>((resolve, reject) => reader.readEntries(resolve, reject))
       for (const child of batch) await walkEntry(child, `${prefix}${entry.name}/`, out)
@@ -161,11 +161,14 @@ export async function decryptInMainThread(file: File, key: Parameters<typeof dec
 
 /** 输出文件名安全化：去掉路径分隔符与危险字符。 */
 export function sanitizeFileName(name: string): string {
-  return name
-    .replace(/[\\/]+/g, '_')
-    .replace(/[\u0000-\u001f<>:"|?*]/g, '_')
-    .replace(/^\.+/, '_')
-    .slice(0, 200)
+  return (
+    name
+      .replace(/[\\/]+/g, '_')
+      // eslint-disable-next-line no-control-regex -- 故意匹配控制字符：非法文件名清洗
+      .replace(/[\u0000-\u001f<>:"|?*]/g, '_')
+      .replace(/^\.+/, '_')
+      .slice(0, 200)
+  )
 }
 
 /** 从相对路径取目录部分（含结尾斜杠，没有则为空串）。 */

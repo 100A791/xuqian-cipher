@@ -132,7 +132,7 @@ async function browserDecrypt(session, { cipherPath, cipherName, keyHex, keyFile
 }
 
 /** 让浏览器下载它刚解出来的原文件，返回落盘路径。 */
-async function browserSaveRestored(session, expectedName) {
+async function browserSaveRestored(session) {
   const clicked = await session.cdp.eval(`
     window.__xqDownloads = [];
     const buttons = Array.from(document.querySelectorAll('button'));
@@ -213,7 +213,7 @@ try {
     check(`浏览器能解密 CLI 产物（${testCase.label}）`, outcome.ok, outcome.detail ?? '')
 
     if (outcome.ok) {
-      const saved = await browserSaveRestored(session, 'payload.bin')
+      const saved = await browserSaveRestored(session)
       const identical = saved.path && existsSync(saved.path) && readFileSync(saved.path).equals(originalBytes)
       check(
         `浏览器还原字节一致（${testCase.label}）`,
